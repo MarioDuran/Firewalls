@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>NETSEC WARGAMES v2</title>
+  <title>NETSEC WARGAMES v3</title>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -10,42 +10,38 @@
     * { box-sizing: border-box; }
     html,body { height: 100%; margin: 0; background: var(--bg); font-family: "Courier New", monospace; color: var(--glow); overflow: hidden; }
     
-    /* Layout Flexbox Completo */
+    /* Layout */
     .app { display: flex; height: 100%; width: 100%; }
-    
     .sidebar { width: 300px; border-right: 1px solid #004400; padding: 20px; display: flex; flex-direction: column; background: rgba(0,20,0,0.3); }
-    
-    /* El main ahora es una columna flex que ocupa todo el ancho restante */
     .main { flex: 1; display: flex; flex-direction: column; padding: 20px; position: relative; height: 100%; }
-    
     .top-bar { height: 40px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--muted); padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
-
-    /* Contenedor principal del juego (Logs + Reglas) */
-    .game-content { display: flex; flex: 1; gap: 20px; overflow: hidden; /* Importante para que el scroll funcione dentro */ }
-
-    /* Columna Izquierda: Logs (Ocupa todo el alto posible) */
+    .game-content { display: flex; flex: 1; gap: 20px; overflow: hidden; }
     .log-column { flex: 2; display: flex; flex-direction: column; height: 100%; }
-    
-    /* Columna Derecha: Reglas */
     .rules-column { flex: 1; display: flex; flex-direction: column; height: 100%; }
 
+    /* UI Components */
     h1, h2, h3 { margin: 0 0 10px 0; font-weight: normal; letter-spacing: 1px; text-transform: uppercase; font-size: 16px; flex-shrink: 0;}
     .panel { border: 1px solid var(--muted); background: var(--panel); padding: 15px; margin-bottom: 20px; border-radius: 4px; }
     
     input, select { background: #001100; border: 1px solid var(--muted); color: var(--glow); padding: 5px; font-family: inherit; width: 100%; margin-bottom: 5px; }
+    
+    /* REMOVER FLECHAS/SPINNERS DE INPUTS */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
     button { background: var(--muted); color: #000; border: none; padding: 8px; cursor: pointer; font-weight: bold; font-family: inherit; width: 100%; transition: 0.2s; }
     button:hover { background: var(--glow); }
     button:disabled { background: #333; color: #666; cursor: not-allowed; }
     button.danger { background: #500; color: #fff; }
 
-    /* LOGS: Flex 1 para empujar hasta abajo */
+    /* Logs */
     .console-log { flex: 1; background: #000; border: 1px solid var(--muted); padding: 10px; overflow-y: auto; font-size: 13px; white-space: pre-wrap; opacity: 0.9; display: flex; flex-direction: column; }
-    /* Truco para mantener el scroll abajo */
     .console-content { margin-top: auto; }
-    
     .log-entry { margin-bottom: 3px; border-bottom: 1px solid #111; padding-bottom: 2px;}
     .log-fw { color: #ffff00; font-weight: bold; }
     .log-atk { color: #00ffff; }
+    .log-err { color: var(--danger); }
     
     .player-item { padding: 8px; border-bottom: 1px solid #112211; cursor: pointer; }
     .player-item:hover { background: #002200; }
@@ -67,8 +63,8 @@
   </div>
 
   <div id="game-over-screen">
-    <h1 style="font-size: 60px;">HACKEADO</h1>
-    <p id="game-over-timer">Reiniciando sistema...</p>
+    <h1 style="font-size: 60px;">ELIMINADO</h1>
+    <p>Has sido hackeado. Fin del juego.</p>
   </div>
 
   <div class="app">
@@ -77,8 +73,8 @@
       <div id="player-list" style="overflow-y: auto; flex: 1; border: 1px solid #222; margin-bottom: 20px;"></div>
       
       <div class="panel" style="flex-shrink: 0;">
-        <h3>Herramienta Ataque</h3>
-        <label style="font-size: 10px;">Objetivo IP:</label>
+        <h3>Attack Tool</h3>
+        <label style="font-size: 10px;">Target IP:</label>
         <input id="atk-ip" readonly placeholder="Selecciona una IP..." style="opacity: 0.5">
         <input id="atk-id" type="hidden">
         
@@ -87,12 +83,13 @@
           <select id="atk-port" style="width: 60%">
             <option value="22">22 (SSH)</option>
             <option value="80">80 (HTTP)</option>
-            <option value="3306">3306 (SQL)</option>
+            <option value="443">443 (HTTPS)</option>
+            <option value="21">21 (SFTP)</option>
           </select>
         </div>
         
         <button id="btn-attack" class="danger" onclick="toggleAttack()">INICIAR ATAQUE</button>
-        <div id="cooldown-msg" style="color: yellow; font-size: 10px; text-align: center; margin-top: 5px; display: none;">ENFRIANDO ARMAS...</div>
+        <div id="cooldown-msg" style="color: yellow; font-size: 10px; text-align: center; margin-top: 5px; display: none;">COOLDOWN ACTIVO...</div>
       </div>
     </div>
 
@@ -117,10 +114,10 @@
             <div style="border-top: 1px solid #333; padding-top: 10px;">
               <select id="fw-action"><option value="deny">DENY (Denegar)</option><option value="allow">ALLOW (Permitir)</option></select>
               <div style="display:flex; gap:5px;">
-                <input id="fw-src" placeholder="IP Origen (* para todas)" value="*">
+                <input id="fw-src" placeholder="IP Origen (Ej: 10.12.0.5)">
                 <select id="fw-proto"><option value="TCP">TCP</option><option value="UDP">UDP</option></select>
               </div>
-              <input id="fw-port" placeholder="Puerto (ej. 22)" type="number">
+              <input id="fw-port" type="text" placeholder="Puerto (Ej. 22)">
               <button onclick="addRule()">AGREGAR REGLA</button>
             </div>
           </div>
@@ -172,11 +169,27 @@
     // --- FIREWALL ---
     function addRule() {
       const action = document.getElementById('fw-action').value;
-      const src = document.getElementById('fw-src').value || '*';
+      const src = document.getElementById('fw-src').value;
       const proto = document.getElementById('fw-proto').value;
-      const port = document.getElementById('fw-port').value;
-      if (!port) return alert("Falta el puerto");
-      socket.emit('update_firewall', { action, src, proto, port });
+      const portInput = document.getElementById('fw-port').value;
+
+      // 1. Validar Puerto (Solo números)
+      if (!/^\d+$/.test(portInput)) {
+        alert("Error: El puerto debe contener solo números.");
+        return;
+      }
+
+      // 2. Validar IP (No permitir *)
+      if (!src || src.includes('*')) {
+        alert("Error: Debes especificar una IP directa (No se permite *).");
+        return;
+      }
+
+      socket.emit('update_firewall', { action, src, proto, port: portInput });
+      
+      // Limpiar campos
+      document.getElementById('fw-src').value = '';
+      document.getElementById('fw-port').value = '';
     }
 
     socket.on('firewall_updated', (rules) => renderRules(rules));
@@ -192,7 +205,7 @@
     // --- ATAQUE & COOLDOWN ---
     function selectTarget(player) {
       if(player.status === 'hacked') return;
-      if(isAttacking) return alert("Detén el ataque actual primero.");
+      if(isAttacking) return alert("Stop Attack primero.");
       
       document.getElementById('atk-ip').value = player.ip;
       document.getElementById('atk-id').value = player.id;
@@ -219,7 +232,7 @@
         
         socket.emit('start_attack', { targetId, targetPort: port, targetProto: proto });
         isAttacking = true;
-        btn.innerText = "DETENER ATAQUE";
+        btn.innerText = "Stop Attack";
         btn.classList.remove('danger');
       }
     }
@@ -233,11 +246,11 @@
       msg.style.display = 'block';
       let left = seconds;
       
-      btn.innerText = `ENFRIANDO (${left})...`;
+      btn.innerText = `Cooldown (${left})...`;
       
       const interval = setInterval(() => {
         left--;
-        btn.innerText = `ENFRIANDO (${left})...`;
+        btn.innerText = `Cooldown (${left})...`;
         if (left <= 0) {
           clearInterval(interval);
           inCooldown = false;
@@ -250,7 +263,7 @@
     });
 
     socket.on('hack_result', (data) => {
-      if (isAttacking) toggleAttack(); // Detener lógica local
+      if (isAttacking) toggleAttack(); 
       alert(data.msg);
     });
 
@@ -262,23 +275,18 @@
       const entry = document.createElement('div');
       entry.className = 'log-entry';
       if (msg.includes('BLOQUEADO')) entry.classList.add('log-fw');
+      if (msg.includes('[ERR]')) entry.classList.add('log-err');
       if (msg.includes('Iniciando')) entry.classList.add('log-atk');
       
       const time = new Date().toLocaleTimeString();
       entry.innerText = `[${time}] ${msg}`;
       
       inner.appendChild(entry);
-      // Auto scroll
       document.getElementById('console').scrollTop = document.getElementById('console').scrollHeight;
     }
 
     socket.on('game_over', () => {
       document.getElementById('game-over-screen').style.display = 'flex';
-    });
-
-    socket.on('game_reset', (data) => {
-      document.getElementById('game-over-screen').style.display = 'none';
-      socket.emit('join_game', { username: data.username, password: data.password }); 
     });
   </script>
 </body>
