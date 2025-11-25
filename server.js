@@ -14,14 +14,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 let players = {}; 
 
 const generateIP = () => `10.12.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
-const generatePass = () => Math.floor(Math.random() * 100).toString();
 
 io.on('connection', (socket) => {
   console.log('Nuevo socket:', socket.id);
 
   socket.on('join_game', ({ username, password }) => {
-    // Si ya existe y está hackeado, no dejar entrar (opcional, o reiniciar servidor)
-    // Para este caso, reiniciamos la sesión del socket si entra de nuevo
     if(players[socket.id]) delete players[socket.id];
     
     let safePass = parseInt(password);
@@ -53,14 +50,12 @@ io.on('connection', (socket) => {
     socket.emit('log', `[SYS] Regla: ${rule.action.toUpperCase()} ${rule.proto}/${rule.port} origen ${rule.src}`);
   });
 
-  // --- ATAQUE ---
   socket.on('start_attack', ({ targetId, targetPort, targetProto }) => {
     const attacker = players[socket.id];
     const victim = players[targetId];
 
     if (!attacker || !victim || attacker.status !== 'active') return;
 
-    // Verificar Cooldown
     const now = Date.now();
     if (attacker.cooldownUntil > now) {
       const remaining = Math.ceil((attacker.cooldownUntil - now) / 1000);
@@ -70,13 +65,11 @@ io.on('connection', (socket) => {
 
     if (attacker.id === victim.id) return;
 
-    socket.emit('log', `[ATK] Iniciando ataque a ${victim.ip}:${targetPort}...`);
+    socket.emit('log', `[ATK] Iniciando ataque a ${victim.ip}:${targetPort} (${targetProto})...`);
 
     if (attacker.attackInterval) clearInterval(attacker.attackInterval);
 
-    // Velocidad: 1 intento por segundo
     attacker.attackInterval = setInterval(() => {
-      // Validaciones de estado
       if (!players[targetId] || players[targetId].status === 'hacked' || !players[socket.id]) {
         clearInterval(attacker.attackInterval);
         return;
@@ -96,14 +89,14 @@ io.on('connection', (socket) => {
       if (matchingRule && matchingRule.action === 'deny') blocked = true;
 
       if (blocked) {
-        // Feedback a la víctima
-        io.to(targetId).emit('log', `[FW] BLOQUEADO: Intento desde ${attacker.ip}:${targetPort}`);
+        // --- CAMBIO AQUÍ: Feedback a la víctima con PROTOCOLO ---
+        io.to(targetId).emit('log', `[FW] BLOQUEADO: Intento (${targetProto}) desde ${attacker.ip}:${targetPort}`);
         
-        // Feedback al ATACANTE (Nuevo requisito)
+        // Feedback al ATACANTE
         socket.emit('log', `[ERR] BLOQUEADO por host remoto (${victim.ip}:${targetPort})`);
       } else {
-        // Log formato solicitado: Pass X desde IP:PUERTO
-        io.to(targetId).emit('log', `[WARN] Login fallido: Pass ${guess} desde ${attacker.ip}:${targetPort}`);
+        // --- CAMBIO AQUÍ: Log de Intento con PROTOCOLO ---
+        io.to(targetId).emit('log', `[WARN] Login fallido: Pass ${guess} desde ${attacker.ip}:${targetPort} (${targetProto})`);
         
         if (guess === players[targetId].password) {
           clearInterval(attacker.attackInterval);
@@ -122,7 +115,6 @@ io.on('connection', (socket) => {
       clearInterval(player.attackInterval);
       player.attackInterval = null;
       
-      // Activar cooldown de 5 segundos
       player.cooldownUntil = Date.now() + 5000;
       
       socket.emit('log', `[SYS] Ataque detenido. Cooldown iniciado (5s)...`);
@@ -144,9 +136,6 @@ function handleGameOver(victimId) {
   victim.status = 'hacked';
   io.to(victimId).emit('game_over', {});
   io.emit('update_player_list', getPublicPlayerList());
-
-  // NOTA: Se eliminó el setTimeout de reinicio. 
-  // El jugador queda eliminado permanentemente en esta sesión.
 }
 
 function getPublicPlayerList() {
