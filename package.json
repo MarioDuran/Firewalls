@@ -1,0 +1,17 @@
+{
+  "name": "firewall-hack-game",
+  "version": "1.0.0",
+  "description": "Juego educativo de ciberseguridad",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "unique-names-generator": "^4.7.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
