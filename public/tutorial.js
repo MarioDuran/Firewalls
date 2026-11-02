@@ -2,7 +2,7 @@
 
 // Simulación local: NO se envía ningún evento Socket.IO al servidor.
 // Sus intentos no hackean al estudiante y su eliminación no suma puntos reales.
-const practiceBot = Object.freeze({ ip: '10.12.0.200', proto: 'TCP', attackPort: '22', vulnerablePort: '80' });
+const practiceBot = Object.freeze({ name: 'BOT ESPECTRO', ip: '10.12.0.200', proto: 'TCP', attackPort: '22', vulnerablePort: '80' });
 const tutorial = {
   visible: false,
   phase: 'observe', // observe, block, check-block, attack, attacking, complete
@@ -51,7 +51,7 @@ function tutorialPhase(phase) {
     const botButton = document.getElementById('tutorial-target');
     botButton.classList.remove('selected');
     botButton.classList.add('eliminated');
-    botButton.textContent = 'BOT ELIMINADO · 10.12.0.200';
+    botButton.textContent = 'BOT ESPECTRO · ELIMINADO · 10.12.0.200';
   }
 }
 
@@ -60,7 +60,7 @@ function tutorialTick() {
   if (tutorial.phase === 'observe' || tutorial.phase === 'block') {
     tutorial.attempts++;
     const guess = (19 + tutorial.attempts * 13) % 100;
-    tutorialLog(`[WARN] Login fallido: Pass ${guess} desde ${practiceBot.ip}:${practiceBot.attackPort} (${practiceBot.proto}).`, 'failed');
+    tutorialLog(`[WARN] Acceso fallido de ${practiceBot.name}: Pass ${guess} desde ${practiceBot.ip}:${practiceBot.attackPort} (${practiceBot.proto}).`, 'failed');
     if (tutorial.phase === 'observe' && tutorial.attempts >= 2) {
       tutorialLog('[SYS] Ambos intentos fueron fallidos. Ahora configura el firewall para detenerlos.');
       tutorialPhase('block');
@@ -97,21 +97,21 @@ function resetTutorial() {
   byId('tutorial-fw-port').value = '';
   byId('tutorial-fw-feedback').textContent = '';
   byId('tutorial-rule-list').textContent = 'Sin reglas de práctica.';
+  byId('tutorial-rule-count').textContent = '0';
   byId('tutorial-target-ip').value = '';
   byId('tutorial-atk-proto').value = 'TCP';
   byId('tutorial-atk-port').value = '22';
   byId('tutorial-atk-feedback').textContent = '';
-  byId('tutorial-target').textContent = 'BOT DE PRÁCTICA · 10.12.0.200';
+  byId('tutorial-target').textContent = `${practiceBot.name} · ${practiceBot.ip}`;
   byId('tutorial-target').classList.remove('selected', 'eliminated');
   tutorialPhase('observe');
   tutorialLog('[SYS] Tutorial iniciado. Tu equipo no puede ser hackeado por el bot.');
-  tutorialLog(`[ATK] El bot ${practiceBot.ip} está atacando tu puerto TCP/22.`);
+  tutorialLog(`[ATK] ${practiceBot.name} (${practiceBot.ip}) está atacando al AGENTE NÉBULA por TCP/22.`);
   tutorial.timer = setInterval(tutorialTick, 1450);
 }
 
 function openTutorial() {
-  // Disponible después del login, también durante la espera y el cooldown.
-  if (document.getElementById('tutorial-launch').style.display !== 'block') return;
+  // Disponible desde el login, sin registrar usuario ni enviar eventos al servidor.
   if (tutorial.visible) return;
   tutorial.visible = true;
   document.getElementById('tutorial-screen').style.display = 'flex';
@@ -142,6 +142,7 @@ function tutorialAddRule() {
     return;
   }
   byId('tutorial-rule-list').textContent = `1. DENY ${proto}/${port} DESDE ${ip}`;
+  byId('tutorial-rule-count').textContent = '1';
   byId('tutorial-fw-feedback').textContent = '¡Regla agregada! Esperando el próximo intento para comprobar el bloqueo.';
   tutorialLog(`[SYS] Regla instalada: DENY ${proto}/${port} desde ${ip}.`, 'success');
   tutorialPhase('check-block');

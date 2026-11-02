@@ -22,7 +22,9 @@ La contraseña fija del panel de administrador es **`Admin2026`** (definida en `
 
 ## Modo tutorial (esquina superior derecha)
 
-Después de conectarse, cada estudiante dispone del botón **MODO TUTORIAL**, visible también mientras espera a que el administrador inicie la ronda y durante el cooldown de eliminación. Se abre una simulación educativa **independiente** de las partidas, por lo que no crea ataques reales, no modifica el firewall del juego ni suma puntos. Puede repetirse cuantas veces quieran.
+Desde la pantalla de **login**, antes de conectarse, cada estudiante dispone del botón **MODO TUTORIAL** en la esquina superior derecha. También permanece visible en la sala de espera, durante el juego y durante el cooldown de eliminación. Se abre una simulación educativa **independiente** de las partidas, por lo que no crea ataques reales, no modifica el firewall del juego ni suma puntos. Puede repetirse cuantas veces quieran.
+
+La simulación utiliza exclusivamente los nombres ficticios **AGENTE NÉBULA** (estudiante) y **BOT ESPECTRO** (rival), y recrea la disposición del scanner, la consola IDS, el firewall y la herramienta de ataque del juego. No solicita usuario ni contraseña.
 
 1. **Observación:** un bot de práctica (`10.12.0.200`) intenta entrar al equipo del estudiante por **TCP/22**; se registran contraseñas incorrectas. **El bot nunca puede hackear al estudiante.**
 2. **Defensa:** después de observar los intentos, se pide agregar una regla **DENY**, **IP origen `10.12.0.200`**, **TCP** y **puerto `22`**. El tutorial comprueba que los parámetros coinciden y muestra el siguiente intento como **BLOQUEADO**.

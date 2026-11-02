@@ -51,12 +51,16 @@ function setup() {
     Date });
   vm.runInContext(tutorialScript, context, { filename: 'tutorial.js' });
   const invoke = expression => vm.runInContext(expression, context);
-  elements['tutorial-launch'].style.display = 'block';
   return { elements, invoke, get intervalCallback() { return intervalCallback; } };
 }
 
 test('el botón y el texto de espera están presentes y no aparece el texto anterior', () => {
   assert.match(html, /id="tutorial-launch"/);
+  assert.match(html, /class="tutorial-launch"[^>]*>MODO TUTORIAL/);
+  assert.match(html, /\.tutorial-launch \{[^}]*display:block/);
+  assert.match(html, /AGENTE NÉBULA/);
+  assert.match(html, /BOT ESPECTRO/);
+  assert.match(html, /class="tutorial-board"/);
   assert.match(html, /src="\/tutorial\.js"/);
   assert.match(html, /Ya estás conectado\. Espera a que inicie la ronda\./);
   assert.doesNotMatch(html, /Espera a que el administrador presione Iniciar ronda/);
@@ -68,11 +72,12 @@ test('el bot falla, el alumno bloquea por DENY y solo entonces puede eliminar al
   const e = t.elements;
   t.invoke('openTutorial()');
   assert.equal(e['tutorial-screen'].style.display, 'flex');
+  assert.equal(e['tutorial-rule-count'].textContent, '0');
   assert.equal(e['tutorial-add-rule'].disabled, true);
   t.intervalCallback();
   t.intervalCallback();
   assert.equal(t.invoke('tutorial.phase'), 'block');
-  assert.ok(e['tutorial-logs'].children.some(node => node.textContent.includes('Login fallido')));
+  assert.ok(e['tutorial-logs'].children.some(node => node.textContent.includes('Acceso fallido')));
   e['tutorial-fw-action'].value = 'allow';
   e['tutorial-fw-ip'].value = '10.12.0.200';
   e['tutorial-fw-proto'].value = 'TCP';
@@ -83,6 +88,7 @@ test('el bot falla, el alumno bloquea por DENY y solo entonces puede eliminar al
   e['tutorial-fw-action'].value = 'deny';
   t.invoke('tutorialAddRule()');
   assert.equal(t.invoke('tutorial.phase'), 'check-block');
+  assert.equal(e['tutorial-rule-count'].textContent, '1');
   t.intervalCallback();
   assert.equal(t.invoke('tutorial.phase'), 'attack');
   assert.ok(e['tutorial-logs'].children.some(node => node.textContent.includes('BLOQUEADO')));
@@ -103,7 +109,7 @@ test('el bot falla, el alumno bloquea por DENY y solo entonces puede eliminar al
   assert.equal(t.invoke('tutorial.phase'), 'complete');
   assert.equal(t.intervalCallback, null);
   assert.equal(e['tutorial-success'].style.display, 'block');
-  assert.match(e['tutorial-target'].textContent, /BOT ELIMINADO/);
+  assert.match(e['tutorial-target'].textContent, /BOT ESPECTRO · ELIMINADO/);
   t.invoke('closeTutorial()');
   assert.equal(e['tutorial-screen'].style.display, 'none');
 });
@@ -111,6 +117,7 @@ test('el bot falla, el alumno bloquea por DENY y solo entonces puede eliminar al
 test('el tutorial puede cerrarse a mitad de práctica y reiniciarse sin intervalos duplicados', () => {
   const t = setup();
   t.invoke('openTutorial()');
+  assert.equal(t.elements['tutorial-screen'].style.display, 'flex'); // sin login ni socket
   t.intervalCallback();
   t.invoke('closeTutorial()');
   assert.equal(t.intervalCallback, null);
