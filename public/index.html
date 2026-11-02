@@ -55,58 +55,11 @@
     .stat { color:#fff; font-weight:bold; }
     .time { font-size:1.2em; }
     .link { color:#93c8ff; font-size:12px; }
-    /* La entrada al tutorial permanece visible incluso sobre la sala de espera. */
+    /* El acceso al tutorial aparece sólo en la pantalla de login. */
     .tutorial-launch { position:fixed; top:12px; right:14px; z-index:240; display:block; width:auto; padding:11px 15px; border:1px solid #00ce6b; background:#092514; color:#8dffba; border-radius:6px; font-size:12px; box-shadow:0 0 18px #001b0d; }
     .tutorial-launch:hover { background:#176736; color:#fff; }
-    #tutorial-screen { position:fixed; inset:0; z-index:400; display:none; overflow-y:auto; padding:20px; background:rgba(0,9,5,.98); }
-    .tutorial-shell { width:min(1060px,100%); margin:auto; border:1px solid #218449; border-radius:8px; padding:22px; background:#07160d; box-shadow:0 0 35px #001a0a; }
-    .tutorial-heading { display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; padding-bottom:12px; margin-bottom:18px; border-bottom:1px solid #254c33; }
-    .tutorial-heading h2 { font-size:22px; margin:0; }
-    .tutorial-heading button { width:auto; padding:9px 14px; }
-    .tutorial-progress { display:flex; gap:9px; flex-wrap:wrap; margin:12px 0 20px; }
-    .tutorial-step { flex:1; min-width:155px; border:1px solid #2a4632; color:#8da393; padding:10px; font-size:12px; border-radius:4px; }
-    .tutorial-step.current { border-color:var(--glow); color:var(--glow); background:#113620; }
-    .tutorial-step.done { color:#c0efd0; border-color:#297a48; }
-    /* Replica el juego: scanner y herramienta de ataque a la izquierda,
-       consola IDS y firewall a la derecha. Los datos son ficticios. */
-    .tutorial-shell { width:min(1320px,100%); }
-    .tutorial-board { display:grid; grid-template-columns:minmax(240px,290px) minmax(0,1fr); gap:16px; }
-    .tutorial-side { min-width:0; border-right:1px solid #275637; padding-right:16px; }
-    .tutorial-workspace { min-width:0; }
-    .tutorial-info { display:flex; gap:10px 26px; flex-wrap:wrap; padding:10px 12px; margin-bottom:12px; border:1px solid #2d5137; background:#081d10; font-size:12px; }
-    .tutorial-body { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(235px,.85fr); gap:16px; }
-    .tutorial-user { color:#def5e4; }
-    .tutorial-bot { color:#ffe6a4; }
-    .tutorial-sim-badge { display:inline-block; color:#ffe4aa; font-size:12px; }
-    .tutorial-target { margin-top:14px; }
-    .tutorial-firewall-count { color:#afd9b7; font-size:12px; margin:0 0 10px; }
-    .tutorial-panel { margin:0; min-width:0; }
-    .tutorial-panel h3 { font-size:14px; }
-    .tutorial-instructions { font-size:13px; color:#d2e4d4; line-height:1.65; margin:0 0 15px; }
-    .tutorial-code { color:#fff1a6; font-weight:bold; }
-    .tutorial-feedback { min-height:34px; margin-top:10px; color:#ffff77; font-size:12px; line-height:1.5; }
-    .tutorial-logs { height:220px; overflow-y:auto; background:#000; border:1px solid #2c5536; padding:12px; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
-    .tutorial-log-entry { border-bottom:1px solid #14251a; padding:3px 0; }
-    .tutorial-log-entry.blocked { color:#fcf69a; }
-    .tutorial-log-entry.success { color:#00ff7f; }
-    .tutorial-log-entry.failed { color:#ffb5a5; }
-    .tutorial-target { display:block; text-align:left; margin-bottom:12px; border:1px solid #376747; color:#ade8b9; background:#0c2615; }
-    .tutorial-target.selected { background:#1f6737; color:#fff; border-color:var(--glow); }
-    .tutorial-target.eliminated { background:#240a0a; color:#ff9999; text-decoration:line-through; }
-    .tutorial-inline { display:flex; gap:8px; }
-    .tutorial-inline > * { min-width:0; flex:1; }
-    .tutorial-note { font-size:11px; color:#a8bbaa; line-height:1.5; margin:14px 0 0; }
-    #tutorial-success { display:none; margin-top:16px; padding:18px; border:1px solid #00dd74; background:#062919; text-align:center; }
-    #tutorial-success h3 { color:#00ff7f; font-size:26px; }
-    #tutorial-repeat { width:auto; margin-top:10px; padding:10px 25px; }
     @media(max-width:700px) {
-      #tutorial-screen { padding:9px; }
-      .tutorial-shell { padding:13px; }
-      .tutorial-board, .tutorial-body { grid-template-columns:1fr; }
-      .tutorial-side { border-right:0; border-bottom:1px solid #275637; padding:0 0 12px; }
-      .tutorial-logs { height:180px; }
       .tutorial-launch { top:8px; right:8px; padding:8px 11px; font-size:11px; }
-      .tutorial-heading h2 { font-size:18px; }
     }
     @media(max-width:850px) {
       .app { height:auto; min-height:100dvh; flex-direction:column; }
@@ -121,77 +74,7 @@
   </style>
 </head>
 <body>
-  <!-- El tutorial es una simulación aislada del juego competitivo. -->
   <button type="button" class="tutorial-launch" id="tutorial-launch">MODO TUTORIAL</button>
-  <section id="tutorial-screen" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
-    <div class="tutorial-shell">
-      <div class="tutorial-heading">
-        <h2 id="tutorial-title">MODO TUTORIAL · FIREWALLS</h2>
-        <button type="button" id="tutorial-close" class="danger">CERRAR ✕</button>
-      </div>
-      <p class="tutorial-note">Práctica independiente: el bot, los ataques y las reglas de este tutorial son simulados. No alteran tu puntuación ni tu firewall real. Si hay una ronda activa, su cronómetro continúa.</p>
-      <div class="tutorial-progress" aria-label="Progreso del tutorial">
-        <div class="tutorial-step current" id="tutorial-step-observe">1 · OBSERVA EL ATAQUE</div>
-        <div class="tutorial-step" id="tutorial-step-block">2 · BLOQUEA AL BOT</div>
-        <div class="tutorial-step" id="tutorial-step-attack">3 · ATACA Y ELIMINA</div>
-      </div>
-      <p class="tutorial-instructions" id="tutorial-instructions" aria-live="polite">El bot va a intentar entrar en tu equipo. Observa los intentos fallidos en los registros.</p>
-      <div class="tutorial-board">
-        <aside class="tutorial-side">
-          <h3>SCANNER DE RED · SIMULACIÓN</h3>
-          <div class="tutorial-sim-badge">RIVAL FICTICIO</div>
-          <button type="button" id="tutorial-target" class="tutorial-target" disabled>BOT ESPECTRO · 10.12.0.200</button>
-          <div class="panel tutorial-panel">
-            <h3>ATTACK TOOL</h3>
-            <label for="tutorial-target-ip">Target IP</label>
-            <input id="tutorial-target-ip" readonly placeholder="Selecciona el bot en el scanner">
-            <div class="tutorial-inline">
-              <div><label for="tutorial-atk-proto">Protocolo</label><select id="tutorial-atk-proto" disabled><option value="TCP">TCP</option><option value="UDP">UDP</option></select></div>
-              <div><label for="tutorial-atk-port">Puerto</label><select id="tutorial-atk-port" disabled><option value="22">22 (SSH)</option><option value="80">80 (HTTP)</option><option value="443">443 (HTTPS)</option><option value="21">21 (SFTP)</option></select></div>
-            </div>
-            <p class="tutorial-instructions">El bot ficticio tiene un servicio vulnerable en <span class="tutorial-code">TCP/80</span>. Después de bloquearlo, selecciónalo y ataca ese puerto.</p>
-            <button type="button" id="tutorial-attack" class="danger" disabled>INICIAR ATAQUE AL BOT</button>
-            <div class="tutorial-feedback" id="tutorial-atk-feedback" role="status"></div>
-          </div>
-        </aside>
-        <div class="tutorial-workspace">
-          <div class="tutorial-info">
-            <span>USR: <strong class="tutorial-user">AGENTE NÉBULA</strong> | IP: <strong>10.12.0.10</strong></span>
-            <span>RIVAL: <strong class="tutorial-bot">BOT ESPECTRO</strong> | IP: <strong>10.12.0.200</strong></span>
-            <span>PRÁCTICA LOCAL | <strong>0 puntos reales</strong></span>
-          </div>
-          <div class="tutorial-body">
-            <div class="panel tutorial-panel">
-              <h3>SISTEMA IDS / LOGS</h3>
-              <div id="tutorial-logs" class="tutorial-logs" role="log" aria-live="polite" aria-relevant="additions"></div>
-            </div>
-            <div class="panel tutorial-panel">
-              <h3>FIREWALL (PRÁCTICA)</h3>
-              <p class="tutorial-firewall-count">REGLAS ACTIVAS: <strong id="tutorial-rule-count">0</strong></p>
-              <div id="tutorial-rule-list" class="rule-list" style="font-size:12px;color:#bee6c8">Sin reglas de práctica.</div>
-              <p class="tutorial-instructions">Ataque detectado: IP origen <span class="tutorial-code">10.12.0.200</span> · <span class="tutorial-code">TCP/22</span>.</p>
-              <label for="tutorial-fw-action">Acción</label>
-              <select id="tutorial-fw-action"><option value="deny">DENY (Denegar)</option><option value="allow">ALLOW (Permitir)</option></select>
-              <label for="tutorial-fw-ip">IP origen</label>
-              <input id="tutorial-fw-ip" placeholder="IP del bot (mira el registro)" autocomplete="off">
-              <div class="tutorial-inline">
-                <div><label for="tutorial-fw-proto">Protocolo</label><select id="tutorial-fw-proto"><option value="TCP">TCP</option><option value="UDP">UDP</option></select></div>
-                <div><label for="tutorial-fw-port">Puerto</label><input id="tutorial-fw-port" type="text" inputmode="numeric" placeholder="Puerto del ataque"></div>
-              </div>
-              <button type="button" id="tutorial-add-rule" disabled>AGREGAR REGLA</button>
-              <div class="tutorial-feedback" id="tutorial-fw-feedback" role="status"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="tutorial-success" role="status">
-        <h3>¡BOT ELIMINADO!</h3>
-        <p>Completaste el tutorial: detectaste un ataque, configuraste una regla DENY y eliminaste al bot.</p>
-        <p>Tu puntuación real no cambió.</p>
-        <button type="button" id="tutorial-repeat">REPETIR TUTORIAL</button>
-      </div>
-    </div>
-  </section>
 
   <div id="login-screen">
     <div class="panel" style="width:min(340px,100%)">
@@ -240,7 +123,7 @@
         <button id="btn-attack" class="danger" onclick="toggleAttack()">INICIAR ATAQUE</button>
         <div id="cooldown-msg" style="color:#ffff77;font-size:11px;text-align:center;margin-top:7px;display:none">COOLDOWN ACTIVO...</div>
       </div>
-      <a class="link" href="/admin">Panel de administrador</a>
+      <a class="link" id="admin-link" href="/admin">Panel de administrador</a>
     </div>
 
     <div class="main">
@@ -275,8 +158,10 @@
   </div>
 
   <script>
-    const socket = io();
+    // El modo tutorial funciona sin siquiera abrir una conexión Socket.IO.
+    const socket = typeof io === 'function' ? io({ autoConnect: false }) : { on() {}, emit() {}, connect() {} };
     const $ = id => document.getElementById(id);
+    let tutorialMode = false;
     let myId = null;
     let myStatus = 'active';
     let isAttacking = false;
@@ -297,12 +182,12 @@
     }
     function setAttacking(value) { isAttacking = value; renderControls(); }
     function renderControls() {
-      const blocked = myStatus === 'hacked';
-      const playing = roundStatus === 'running' && roundEndsAt > serverNow();
+      const blocked = !tutorialMode && myStatus === 'hacked';
+      const playing = tutorialMode || (roundStatus === 'running' && roundEndsAt > serverNow());
       const cooling = attackCooldownUntil > serverNow();
-      $('btn-attack').disabled = !playing || blocked || (cooling && !isAttacking) || !myId;
+      $('btn-attack').disabled = !playing || blocked || (cooling && !isAttacking) || !myId || (tutorialMode && !tutorialState.botAlive);
       $('btn-attack').classList.toggle('danger', !isAttacking);
-      $('btn-attack').textContent = !playing ? 'ESPERANDO RONDA' : blocked ? 'EQUIPO ELIMINADO' : isAttacking ? 'DETENER ATAQUE' : cooling ? `Cooldown (${remaining(attackCooldownUntil - serverNow())})` : 'INICIAR ATAQUE';
+      $('btn-attack').textContent = !playing ? 'ESPERANDO RONDA' : blocked ? 'EQUIPO ELIMINADO' : tutorialMode && !tutorialState.botAlive ? 'OBJETIVO ELIMINADO' : isAttacking ? 'DETENER ATAQUE' : cooling ? `Cooldown (${remaining(attackCooldownUntil - serverNow())})` : 'INICIAR ATAQUE';
       $('cooldown-msg').style.display = cooling && !blocked && playing ? 'block' : 'none';
       $('add-rule-btn').disabled = !playing || blocked || !myId;
       $('game-over-screen').style.display = playing && blocked && myId ? 'flex' : 'none';
@@ -319,7 +204,7 @@
       $('restart-btn').textContent = waiting ? 'ESPERA EL COOLDOWN' : 'VOLVER A JUGAR';
     }
     function tick() {
-      $('round-timer').textContent = roundStatus === 'running' && roundEndsAt
+      $('round-timer').textContent = tutorialMode ? '15:00' : roundStatus === 'running' && roundEndsAt
         ? remaining(roundEndsAt - serverNow())
         : roundStatus === 'finished' ? '00:00' : '15:00';
       renderControls();
@@ -335,7 +220,8 @@
         return;
       }
       joinCredentials = { username, password };
-      sendJoin();
+      if (typeof socket.connected === 'boolean' && socket.connected) sendJoin();
+      else socket.connect();
     }
     function sendJoin() {
       if (!joinCredentials) return;
@@ -343,7 +229,7 @@
     }
     socket.on('connect', () => {
       // Socket.IO usa un ID nuevo tras reconectar; la identidad se conserva mediante token.
-      if (joinedBefore && joinCredentials) sendJoin();
+      if (joinCredentials) sendJoin();
     });
     socket.on('join_error', error => { $('login-error').textContent = error; });
     socket.on('round_state', data => {
@@ -362,7 +248,6 @@
     });
     socket.on('round_started', () => {
       if (!myId) return;
-      closeTutorial(); // START! debe aparecer incluso si el estudiante estaba practicando.
       $('round-start-screen').style.display = 'flex';
       if (startOverlayTimer) clearTimeout(startOverlayTimer);
       startOverlayTimer = setTimeout(() => { $('round-start-screen').style.display = 'none'; }, 2300);
@@ -382,6 +267,7 @@
       attackCooldownUntil = player.attackCooldownUntil || 0;
       if (player.profileToken) localStorage.setItem('firewalls-profile-token', player.profileToken);
       $('login-screen').style.display = 'none';
+      $('tutorial-launch').style.display = 'none';
       $('login-user').value = player.username;
       $('my-user').textContent = player.username;
       $('my-ip').textContent = player.ip;
@@ -418,7 +304,8 @@
       if (octets.length !== 4 || octets.some(x => !/^\d{1,3}$/.test(x) || Number(x) > 255)) {
         return alert('Especifica una dirección IPv4 válida, sin comodines (*).');
       }
-      socket.emit('update_firewall', { action, src, proto, port });
+      if (tutorialMode) tutorialAddRule({ action, src, proto, port });
+      else socket.emit('update_firewall', { action, src, proto, port });
       $('fw-src').value = '';
       $('fw-port').value = '';
     }
@@ -444,10 +331,11 @@
     }
     function toggleAttack() {
       if (myStatus !== 'active' || roundStatus !== 'running' || serverNow() >= roundEndsAt) return;
-      if (isAttacking) { socket.emit('stop_attack'); return; }
+      if (isAttacking) { if (tutorialMode) tutorialToggleAttack(); else socket.emit('stop_attack'); return; }
       if (attackCooldownUntil > serverNow()) return;
       if (!$('atk-id').value) return alert('Selecciona un objetivo.');
-      socket.emit('start_attack', { targetId: $('atk-id').value, targetPort: $('atk-port').value, targetProto: $('atk-proto').value });
+      if (tutorialMode) tutorialToggleAttack();
+      else socket.emit('start_attack', { targetId: $('atk-id').value, targetPort: $('atk-port').value, targetProto: $('atk-proto').value });
     }
     socket.on('attack_started', () => setAttacking(true));
     socket.on('attack_stopped', () => setAttacking(false));
@@ -480,8 +368,8 @@
       if (inner.childElementCount > 1000) inner.firstElementChild.remove();
       $('console').scrollTop = $('console').scrollHeight;
     }
-    socket.on('disconnect', () => { setAttacking(false); $('round-start-screen').style.display = 'none'; addLog('[SYS] Conexión interrumpida. Intentando reconectar...'); });
+    socket.on('disconnect', () => { if (tutorialMode) return; setAttacking(false); $('round-start-screen').style.display = 'none'; addLog('[SYS] Conexión interrumpida. Intentando reconectar...'); });
   </script>
-  <script src="/tutorial.js"></script>
+  <script src="tutorial.js"></script>
 </body>
 </html>

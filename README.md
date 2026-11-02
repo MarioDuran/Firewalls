@@ -13,24 +13,25 @@ La contraseña fija del panel de administrador es **`Admin2026`** (definida en `
 
 ## Inicio y fin de una ronda (solo administrador)
 
-1. Los participantes entran al juego con su usuario y contraseña numérica y ven **ESPERANDO INICIO** y el texto **«Ya estás conectado. Espera a que inicie la ronda.»**. Aunque estén conectados, **no pueden atacar ni modificar el firewall real** hasta que el administrador inicie la ronda. Sí pueden practicar en el modo tutorial.
+1. Los participantes entran al juego con su usuario y contraseña numérica y ven **ESPERANDO INICIO** y el texto **«Ya estás conectado. Espera a que inicie la ronda.»**. Aunque estén conectados, **no pueden atacar ni modificar el firewall real** hasta que el administrador inicie la ronda. El modo tutorial está disponible desde el login, sin necesidad de iniciar sesión.
 2. En `/admin`, inicia sesión con `Admin2026` y pulsa **INICIAR RONDA**. Solamente las conexiones autenticadas como administrador pueden enviar esta orden al servidor.
 3. Todos los jugadores que ya estén conectados ven **START!** durante unos segundos; el cronómetro de **15:00** comienza a descontarse de inmediato, de forma sincronizada para todos. Quienes se conecten más tarde entran a la ronda que ya esté en curso, sin reiniciar el reloj.
 4. Al cumplirse los 15 minutos, el servidor **detiene todos los ataques**, impide nuevas acciones y muestra a los participantes **FIN DE RONDA**. No comienza la ronda siguiente automáticamente.
 5. El administrador ve **RESULTADOS FINALES**, la **tabla completa de participantes de esa ronda** (incluidos quienes se desconectaron) ordenada por **puntos de ronda**, y un anuncio de **GANADOR**. Si hay empate en primer lugar se indican todos los ganadores; si no hay hackeos se indica que no hubo ganador. Debajo se mantiene el ranking histórico ordenado por puntos totales.
 6. Cuando desee continuar, el administrador pulsa **INICIAR SIGUIENTE RONDA**. Se reinician reglas y puntos de la ronda anterior, se asignan nuevas IP y se conservan los puntos totales y los cooldowns de eliminación aún vigentes.
 
-## Modo tutorial (esquina superior derecha)
+## Modo tutorial (interfaz idéntica al juego)
 
-Desde la pantalla de **login**, antes de conectarse, cada estudiante dispone del botón **MODO TUTORIAL** en la esquina superior derecha. También permanece visible en la sala de espera, durante el juego y durante el cooldown de eliminación. Se abre una simulación educativa **independiente** de las partidas, por lo que no crea ataques reales, no modifica el firewall del juego ni suma puntos. Puede repetirse cuantas veces quieran.
+En el login aparece **MODO TUTORIAL** en la esquina superior derecha. Al pulsarlo se abre **el mismo tablero real del juego** (mismo scanner, herramienta de ataque, IDS, firewall, controles, distribuciones y estilos). No hay paneles, guías, letreros de pasos ni pistas: el profesor explica el ejercicio durante la clase. El enlace lateral se convierte en **SALIR DEL TUTORIAL** para volver al login.
 
-La simulación utiliza exclusivamente los nombres ficticios **AGENTE NÉBULA** (estudiante) y **BOT ESPECTRO** (rival), y recrea la disposición del scanner, la consola IDS, el firewall y la herramienta de ataque del juego. No solicita usuario ni contraseña.
+La práctica se ejecuta exclusivamente en el navegador. **No se conecta al servidor mediante Socket.IO**, no registra jugadores, no cambia firewall ni puntos del juego competitivo y funciona de forma autónoma incluso si no se dispone de Socket.IO (para abrir el HTML localmente, se deben cargar los archivos del sitio juntos). Solo existen dos identidades ficticias:
 
-1. **Observación:** un bot de práctica (`10.12.0.200`) intenta entrar al equipo del estudiante por **TCP/22**; se registran contraseñas incorrectas. **El bot nunca puede hackear al estudiante.**
-2. **Defensa:** después de observar los intentos, se pide agregar una regla **DENY**, **IP origen `10.12.0.200`**, **TCP** y **puerto `22`**. El tutorial comprueba que los parámetros coinciden y muestra el siguiente intento como **BLOQUEADO**.
-3. **Ataque:** el estudiante selecciona el bot en el scanner, elige **TCP/80**, y pulsa **INICIAR ATAQUE AL BOT**. Tras varios intentos simulados aparece **¡BOT ELIMINADO!** y el tutorial se marca como completado.
+- **AGENTE NÉBULA** (alumno): `10.12.0.10`, contraseña de simulación `42`.
+- **BOT ESPECTRO** (rival): `10.12.0.200`.
 
-Si el administrador inicia una ronda mientras alguien usa el tutorial, éste se cierra para mostrar **START!**. Durante una ronda activa, abrir el tutorial **no pausa** el cronómetro del juego real.
+El bot intenta entrar permanentemente en el equipo del alumno por **TCP/22**, con intentos fallidos registrados en la consola auténtica del juego. **Nunca consigue hackear al alumno.** El alumno puede crear reglas con los controles de firewall normales, sin límites, y bloquear al bot creando `DENY`, IP `10.12.0.200`, protocolo `TCP`, puerto `22`. Las reglas se procesan en orden, como en el servidor real.
+
+El bot aparece como único objetivo en el scanner. El alumno puede seleccionarlo y utilizar **INICIAR ATAQUE** en la herramienta existente. El servicio vulnerable del bot en esta práctica es **TCP/80**; tras tres intentos se hackea al bot, se detienen sus ataques, aparece como eliminado en el scanner y el contador local pasa a 1 (sin sumar puntos reales). Se mantiene el cooldown de 5 segundos cuando el alumno detiene manualmente un ataque. Al volver al login y abrir el tutorial otra vez, se reinicia toda la simulación.
 
 ## Funcionamiento
 
