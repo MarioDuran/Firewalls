@@ -13,12 +13,22 @@ La contraseña fija del panel de administrador es **`Admin2026`** (definida en `
 
 ## Inicio y fin de una ronda (solo administrador)
 
-1. Los participantes entran al juego con su usuario y contraseña numérica y ven **ESPERANDO INICIO**. Aunque estén conectados, **no pueden atacar ni modificar el firewall** hasta que el administrador inicie la ronda.
+1. Los participantes entran al juego con su usuario y contraseña numérica y ven **ESPERANDO INICIO** y el texto **«Ya estás conectado. Espera a que inicie la ronda.»**. Aunque estén conectados, **no pueden atacar ni modificar el firewall real** hasta que el administrador inicie la ronda. Sí pueden practicar en el modo tutorial.
 2. En `/admin`, inicia sesión con `Admin2026` y pulsa **INICIAR RONDA**. Solamente las conexiones autenticadas como administrador pueden enviar esta orden al servidor.
 3. Todos los jugadores que ya estén conectados ven **START!** durante unos segundos; el cronómetro de **15:00** comienza a descontarse de inmediato, de forma sincronizada para todos. Quienes se conecten más tarde entran a la ronda que ya esté en curso, sin reiniciar el reloj.
 4. Al cumplirse los 15 minutos, el servidor **detiene todos los ataques**, impide nuevas acciones y muestra a los participantes **FIN DE RONDA**. No comienza la ronda siguiente automáticamente.
 5. El administrador ve **RESULTADOS FINALES**, la **tabla completa de participantes de esa ronda** (incluidos quienes se desconectaron) ordenada por **puntos de ronda**, y un anuncio de **GANADOR**. Si hay empate en primer lugar se indican todos los ganadores; si no hay hackeos se indica que no hubo ganador. Debajo se mantiene el ranking histórico ordenado por puntos totales.
 6. Cuando desee continuar, el administrador pulsa **INICIAR SIGUIENTE RONDA**. Se reinician reglas y puntos de la ronda anterior, se asignan nuevas IP y se conservan los puntos totales y los cooldowns de eliminación aún vigentes.
+
+## Modo tutorial (esquina superior derecha)
+
+Después de conectarse, cada estudiante dispone del botón **MODO TUTORIAL**, visible también mientras espera a que el administrador inicie la ronda y durante el cooldown de eliminación. Se abre una simulación educativa **independiente** de las partidas, por lo que no crea ataques reales, no modifica el firewall del juego ni suma puntos. Puede repetirse cuantas veces quieran.
+
+1. **Observación:** un bot de práctica (`10.12.0.200`) intenta entrar al equipo del estudiante por **TCP/22**; se registran contraseñas incorrectas. **El bot nunca puede hackear al estudiante.**
+2. **Defensa:** después de observar los intentos, se pide agregar una regla **DENY**, **IP origen `10.12.0.200`**, **TCP** y **puerto `22`**. El tutorial comprueba que los parámetros coinciden y muestra el siguiente intento como **BLOQUEADO**.
+3. **Ataque:** el estudiante selecciona el bot en el scanner, elige **TCP/80**, y pulsa **INICIAR ATAQUE AL BOT**. Tras varios intentos simulados aparece **¡BOT ELIMINADO!** y el tutorial se marca como completado.
+
+Si el administrador inicia una ronda mientras alguien usa el tutorial, éste se cierra para mostrar **START!**. Durante una ronda activa, abrir el tutorial **no pausa** el cronómetro del juego real.
 
 ## Funcionamiento
 
