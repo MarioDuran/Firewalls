@@ -42,6 +42,12 @@
     #login-screen,#game-over-screen { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:20px; }
     #login-screen { background:var(--bg); }
     #game-over-screen { background:rgba(28,0,0,.97); z-index:200; display:none; text-align:center; color:var(--danger); }
+    #round-hold-screen { position:fixed; inset:0; z-index:220; display:none; align-items:center; justify-content:center; flex-direction:column; padding:22px; background:rgba(1,12,5,.97); text-align:center; }
+    #round-hold-screen h1 { font-size:clamp(32px,7vw,58px); }
+    #round-hold-screen p { color:#b3caba; max-width:600px; line-height:1.6; }
+    #round-start-screen { position:fixed; inset:0; z-index:300; display:none; align-items:center; justify-content:center; background:#031409; color:#00ff7f; text-align:center; }
+    #round-start-screen h1 { font-size:clamp(75px,18vw,170px); letter-spacing:.12em; text-shadow:0 0 35px #00b45d; animation:start-pop .45s ease-out both; }
+    @keyframes start-pop { from { transform:scale(.65); opacity:0; } to { transform:scale(1); opacity:1; } }
     #game-over-screen h1 { font-size:clamp(32px,8vw,64px); }
     #game-over-screen p { max-width:520px; }
     #restart-btn { max-width:320px; margin:18px auto; }
@@ -82,6 +88,14 @@
     <p class="muted">Tu puntuación acumulada se conserva.</p>
   </div>
 
+  <div id="round-hold-screen" role="status" aria-live="polite">
+    <h1 id="hold-title">ESPERANDO INICIO</h1>
+    <p id="hold-description">Conectado correctamente. El administrador iniciará la ronda.</p>
+    <p>RONDA <strong id="hold-round">1</strong> · <strong id="hold-count">15:00</strong></p>
+  </div>
+
+  <div id="round-start-screen" aria-live="assertive" role="status"><h1>START!</h1></div>
+
   <div class="app">
     <div class="sidebar">
       <h3>Scanner de Red</h3>
@@ -107,7 +121,7 @@
     <div class="main">
       <div class="top-bar">
         <div>USR: <strong id="my-user">...</strong> | IP: <strong id="my-ip">...</strong> | PASS: <strong id="my-pass">...</strong></div>
-        <div>RONDA <span class="stat" id="round-number">1</span> | <span class="time stat" id="round-timer">10:00</span></div>
+        <div>RONDA <span class="stat" id="round-number">1</span> | <span class="time stat" id="round-timer">15:00</span></div>
         <div>HACKS RONDA: <strong class="stat" id="my-hacks">0</strong> | TOTAL: <strong class="stat" id="my-total">0</strong></div>
       </div>
       <div class="game-content">
@@ -144,6 +158,8 @@
     let attackCooldownUntil = 0;
     let reviveAt = 0;
     let roundEndsAt = 0;
+    let roundStatus = 'waiting';
+    let startOverlayTimer = null;
     let clockOffset = 0;
     let joinedBefore = false;
     let currentRound = null;
@@ -157,20 +173,30 @@
     function setAttacking(value) { isAttacking = value; renderControls(); }
     function renderControls() {
       const blocked = myStatus === 'hacked';
+      const playing = roundStatus === 'running' && roundEndsAt > serverNow();
       const cooling = attackCooldownUntil > serverNow();
-      $('btn-attack').disabled = blocked || (cooling && !isAttacking) || !myId;
+      $('btn-attack').disabled = !playing || blocked || (cooling && !isAttacking) || !myId;
       $('btn-attack').classList.toggle('danger', !isAttacking);
-      $('btn-attack').textContent = blocked ? 'EQUIPO ELIMINADO' : isAttacking ? 'DETENER ATAQUE' : cooling ? `Cooldown (${remaining(attackCooldownUntil - serverNow())})` : 'INICIAR ATAQUE';
-      $('cooldown-msg').style.display = cooling && !blocked ? 'block' : 'none';
-      $('add-rule-btn').disabled = blocked || !myId;
-      $('game-over-screen').style.display = blocked ? 'flex' : 'none';
+      $('btn-attack').textContent = !playing ? 'ESPERANDO RONDA' : blocked ? 'EQUIPO ELIMINADO' : isAttacking ? 'DETENER ATAQUE' : cooling ? `Cooldown (${remaining(attackCooldownUntil - serverNow())})` : 'INICIAR ATAQUE';
+      $('cooldown-msg').style.display = cooling && !blocked && playing ? 'block' : 'none';
+      $('add-rule-btn').disabled = !playing || blocked || !myId;
+      $('game-over-screen').style.display = playing && blocked && myId ? 'flex' : 'none';
+      $('round-hold-screen').style.display = myId && !playing ? 'flex' : 'none';
+      $('hold-title').textContent = roundStatus === 'finished' ? 'FIN DE RONDA' : 'ESPERANDO INICIO';
+      $('hold-description').textContent = roundStatus === 'finished'
+        ? 'La ronda terminó. El administrador está revisando los resultados e iniciará la siguiente ronda.'
+        : 'Ya estás conectado. Espera a que el administrador presione Iniciar ronda.';
+      $('hold-round').textContent = currentRound ?? 1;
+      $('hold-count').textContent = roundStatus === 'finished' ? '00:00' : '15:00';
       const waiting = reviveAt > serverNow();
       $('revive-timer').textContent = waiting ? remaining(reviveAt - serverNow()) : '00:00';
-      $('restart-btn').disabled = waiting;
+      $('restart-btn').disabled = waiting || !playing;
       $('restart-btn').textContent = waiting ? 'ESPERA EL COOLDOWN' : 'VOLVER A JUGAR';
     }
     function tick() {
-      if (roundEndsAt) $('round-timer').textContent = remaining(roundEndsAt - serverNow());
+      $('round-timer').textContent = roundStatus === 'running' && roundEndsAt
+        ? remaining(roundEndsAt - serverNow())
+        : roundStatus === 'finished' ? '00:00' : '15:00';
       renderControls();
     }
     setInterval(tick, 250);
@@ -202,10 +228,25 @@
         setAttacking(false);
       }
       currentRound = data.number;
-      roundEndsAt = data.endsAt;
+      roundStatus = data.status;
+      roundEndsAt = data.endsAt || 0;
+      if (roundStatus !== 'running') setAttacking(false);
       clockOffset = data.serverNow - Date.now();
       $('round-number').textContent = data.number;
       tick();
+    });
+    socket.on('round_started', () => {
+      if (!myId) return;
+      $('round-start-screen').style.display = 'flex';
+      if (startOverlayTimer) clearTimeout(startOverlayTimer);
+      startOverlayTimer = setTimeout(() => { $('round-start-screen').style.display = 'none'; }, 2300);
+      addLog('[RONDA] START! El cronómetro está en marcha.');
+    });
+    socket.on('round_finished', () => {
+      setAttacking(false);
+      $('round-start-screen').style.display = 'none';
+      if (startOverlayTimer) clearTimeout(startOverlayTimer);
+      addLog('[RONDA] Tiempo agotado. Esperando la próxima ronda.');
     });
     socket.on('init_state', player => {
       joinedBefore = true;
@@ -241,7 +282,7 @@
     });
 
     function addRule() {
-      if (myStatus !== 'active') return;
+      if (myStatus !== 'active' || roundStatus !== 'running' || serverNow() >= roundEndsAt) return;
       const action = $('fw-action').value;
       const src = $('fw-src').value.trim();
       const proto = $('fw-proto').value;
@@ -270,13 +311,13 @@
     socket.on('firewall_updated', renderRules);
 
     function selectTarget(player) {
-      if (myStatus !== 'active' || player.status === 'hacked') return;
+      if (myStatus !== 'active' || roundStatus !== 'running' || serverNow() >= roundEndsAt || player.status === 'hacked') return;
       if (isAttacking) return alert('Detén el ataque antes de seleccionar otro objetivo.');
       $('atk-ip').value = player.ip;
       $('atk-id').value = player.id;
     }
     function toggleAttack() {
-      if (myStatus !== 'active') return;
+      if (myStatus !== 'active' || roundStatus !== 'running' || serverNow() >= roundEndsAt) return;
       if (isAttacking) { socket.emit('stop_attack'); return; }
       if (attackCooldownUntil > serverNow()) return;
       if (!$('atk-id').value) return alert('Selecciona un objetivo.');
@@ -313,7 +354,7 @@
       if (inner.childElementCount > 1000) inner.firstElementChild.remove();
       $('console').scrollTop = $('console').scrollHeight;
     }
-    socket.on('disconnect', () => { setAttacking(false); addLog('[SYS] Conexión interrumpida. Intentando reconectar...'); });
+    socket.on('disconnect', () => { setAttacking(false); $('round-start-screen').style.display = 'none'; addLog('[SYS] Conexión interrumpida. Intentando reconectar...'); });
   </script>
 </body>
 </html>

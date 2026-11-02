@@ -16,6 +16,13 @@
     input { max-width: 340px; width: 100%; }
     button { cursor: pointer; }
     button:hover { background: #103a23; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    #start-round-btn { background:#0e602c; color:#fff; font-weight:bold; border-color:#21dd6e; font-size:1.1rem; }
+    #start-round-btn:not(:disabled):hover { background:#188c45; }
+    #round-status { font-size:1.05rem; font-weight:bold; color:#fff; }
+    #winner-banner { font-size:1.35rem; font-weight:bold; color:#ffe77c; margin:12px 0 20px; }
+    #results-panel { border-color:#e2ca53; }
+    .winner-row { background:#182313; color:#ffe77c; }
     .error { color: #ff7373; margin: 12px 0; min-height: 24px; }
     .stats { display: flex; gap: 14px; flex-wrap: wrap; }
     .stat { flex: 1; min-width: 180px; background: #041208; border: 1px solid #294b31; padding: 15px; }
@@ -44,10 +51,25 @@
   <main id="admin-panel" style="display:none">
     <div class="stats">
       <div class="stat">RONDA ACTUAL<strong id="round-number">—</strong></div>
-      <div class="stat">TIEMPO RESTANTE<strong id="round-time">10:00</strong></div>
+      <div class="stat">TIEMPO RESTANTE<strong id="round-time">15:00</strong></div>
       <div class="stat">JUGADORES CONECTADOS<strong id="online-count">0</strong></div>
       <div class="stat">JUGADORES REGISTRADOS<strong id="total-count">0</strong></div>
     </div>
+    <section class="panel" id="round-control-panel">
+      <h2>CONTROL DE RONDA</h2>
+      <p id="round-status">Esperando jugadores</p>
+      <button id="start-round-btn" type="button">INICIAR RONDA</button>
+      <p class="muted">Los jugadores permanecen bloqueados hasta que presiones el botón. Cada ronda dura 15 minutos y no comienza automáticamente otra.</p>
+      <p id="control-error" class="error" role="alert"></p>
+    </section>
+    <section class="panel" id="results-panel" style="display:none">
+      <h2 id="results-title">RESULTADOS DE LA RONDA</h2>
+      <p id="winner-banner"></p>
+      <div class="scroll"><table>
+        <thead><tr><th>POS.</th><th>JUGADOR</th><th>PUNTOS DE RONDA</th><th>PUNTOS TOTALES</th><th>RESULTADO</th></tr></thead>
+        <tbody id="results-body"></tbody>
+      </table></div>
+    </section>
     <section class="panel">
       <h2>RANKING GENERAL — MAYOR A MENOR</h2>
       <div class="scroll"><table>
@@ -61,6 +83,7 @@
     const socket = io();
     let authenticated = false;
     let roundEndsAt = 0;
+    let roundStatus = 'waiting';
     let clockOffset = 0;
     const $ = id => document.getElementById(id);
     function formatRemaining(ms) {
@@ -73,7 +96,14 @@
       socket.emit('admin_login', { password: $('admin-password').value });
       $('admin-password').value = '';
     });
-    socket.on('admin_error', msg => $('error').textContent = msg);
+    socket.on('admin_error', msg => {
+      (authenticated ? $('control-error') : $('error')).textContent = msg;
+    });
+    $('start-round-btn').addEventListener('click', () => {
+      if (!authenticated || roundStatus === 'running') return;
+      $('control-error').textContent = '';
+      socket.emit('admin_start_round');
+    });
     socket.on('admin_authenticated', () => {
       authenticated = true;
       $('login-panel').style.display = 'none';
@@ -82,7 +112,39 @@
     socket.on('admin_state', data => {
       if (!authenticated) return;
       $('round-number').textContent = data.round.number;
-      roundEndsAt = data.round.endsAt;
+      roundEndsAt = data.round.endsAt || 0;
+      roundStatus = data.round.status;
+      $('start-round-btn').disabled = roundStatus === 'running';
+      $('start-round-btn').textContent = roundStatus === 'finished' ? 'INICIAR SIGUIENTE RONDA' : roundStatus === 'running' ? 'RONDA EN CURSO' : 'INICIAR RONDA';
+      $('round-status').textContent = roundStatus === 'finished' ? `Ronda ${data.round.number} finalizada. Resultados disponibles abajo.`
+        : roundStatus === 'running' ? `Ronda ${data.round.number} en curso.` : 'Sala de espera: los jugadores ya pueden conectarse.';
+      const results = data.results;
+      $('results-panel').style.display = roundStatus === 'finished' && results ? 'block' : 'none';
+      if (results && roundStatus === 'finished') {
+        $('results-title').textContent = `RESULTADOS FINALES — RONDA ${results.number}`;
+        $('winner-banner').textContent = results.winners.length === 1
+          ? `GANADOR: ${results.winners[0]} — ${results.topScore} ${results.topScore === 1 ? 'PUNTO' : 'PUNTOS'}`
+          : results.winners.length > 1 ? `EMPATE: ${results.winners.join(', ')} — ${results.topScore} PUNTOS`
+          : 'SIN GANADOR: nadie consiguió hackeos en esta ronda.';
+        const resultsBody = $('results-body');
+        resultsBody.replaceChildren();
+        if (!results.ranking.length) {
+          const row = resultsBody.insertRow();
+          const cell = row.insertCell();
+          cell.colSpan = 5;
+          cell.textContent = 'No hubo participantes.';
+        }
+        results.ranking.forEach((p, i) => {
+          const winner = results.winners.includes(p.username) && p.roundHacks === results.topScore;
+          const row = resultsBody.insertRow();
+          if (winner) row.className = 'winner-row';
+          [i + 1, p.username, p.roundHacks, p.totalHacks, winner ? 'GANADOR' : '—'].forEach((v, j) => {
+            const cell = row.insertCell();
+            cell.textContent = v;
+            if (j === 2) cell.className = 'number';
+          });
+        });
+      }
       clockOffset = data.round.serverNow - Date.now();
       $('online-count').textContent = data.onlineCount;
       $('total-count').textContent = data.ranking.length;
@@ -107,10 +169,14 @@
     socket.on('disconnect', () => {
       authenticated = false;
       $('admin-panel').style.display = 'none';
+      roundEndsAt = 0;
       $('login-panel').style.display = 'block';
       $('error').textContent = 'Conexión perdida. Inicia sesión de nuevo.';
     });
-    setInterval(() => { if (roundEndsAt) $('round-time').textContent = formatRemaining(roundEndsAt - (Date.now() + clockOffset)); }, 250);
+    setInterval(() => {
+      $('round-time').textContent = roundStatus === 'running' && roundEndsAt
+        ? formatRemaining(roundEndsAt - (Date.now() + clockOffset)) : roundStatus === 'finished' ? '00:00' : '15:00';
+    }, 250);
   </script>
 </body>
 </html>

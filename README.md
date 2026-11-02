@@ -7,18 +7,27 @@ Juego educativo multijugador con Express y Socket.IO.
 1. Instala **Node.js 16 o superior**.
 2. En la carpeta del proyecto ejecuta `npm install`.
 3. Inicia el servidor con `npm start`. No es necesario configurar la variable de entorno `ADMIN_PASSWORD`.
-4. Abre `http://localhost:3000` para jugar y `http://localhost:3000/admin` para ver la clasificación.
+4. Abre `http://localhost:3000` para que los jugadores entren al lobby y `http://localhost:3000/admin` para controlar la ronda y consultar los resultados.
 
 La contraseña fija del panel de administrador es **`Admin2026`** (definida en `server.js`).
+
+## Inicio y fin de una ronda (solo administrador)
+
+1. Los participantes entran al juego con su usuario y contraseña numérica y ven **ESPERANDO INICIO**. Aunque estén conectados, **no pueden atacar ni modificar el firewall** hasta que el administrador inicie la ronda.
+2. En `/admin`, inicia sesión con `Admin2026` y pulsa **INICIAR RONDA**. Solamente las conexiones autenticadas como administrador pueden enviar esta orden al servidor.
+3. Todos los jugadores que ya estén conectados ven **START!** durante unos segundos; el cronómetro de **15:00** comienza a descontarse de inmediato, de forma sincronizada para todos. Quienes se conecten más tarde entran a la ronda que ya esté en curso, sin reiniciar el reloj.
+4. Al cumplirse los 15 minutos, el servidor **detiene todos los ataques**, impide nuevas acciones y muestra a los participantes **FIN DE RONDA**. No comienza la ronda siguiente automáticamente.
+5. El administrador ve **RESULTADOS FINALES**, la **tabla completa de participantes de esa ronda** (incluidos quienes se desconectaron) ordenada por **puntos de ronda**, y un anuncio de **GANADOR**. Si hay empate en primer lugar se indican todos los ganadores; si no hay hackeos se indica que no hubo ganador. Debajo se mantiene el ranking histórico ordenado por puntos totales.
+6. Cuando desee continuar, el administrador pulsa **INICIAR SIGUIENTE RONDA**. Se reinician reglas y puntos de la ronda anterior, se asignan nuevas IP y se conservan los puntos totales y los cooldowns de eliminación aún vigentes.
 
 ## Funcionamiento
 
 - **Firewall:** cada participante puede agregar tantas reglas como necesite; ya no se eliminan las antiguas al alcanzar tres. Se conserva el orden de las reglas: prevalece la primera coincidencia.
 - **Hackeo:** si un jugador es hackeado, queda eliminado temporalmente, sus ataques activos se cancelan en el **servidor** y no puede crear ataques ni reglas nuevas.
 - **Reingreso:** el jugador debe esperar **60 segundos** antes de pulsar **VOLVER A JUGAR**. Recibe nueva IP y comienza sin reglas, manteniendo su puntaje acumulado. El temporizador se valida en el servidor, incluso tras recargar la página con el mismo perfil.
-- **Rondas:** duran **10 minutos**, con un reloj global compartido por todos. Al empezar otra ronda se detienen los ataques, se eliminan las reglas, se reinician los puntos **de ronda** y se asignan nuevas IP. Los puntos totales no se reinician. Un cooldown por hackeo todavía activo sigue vigente al cambiar de ronda.
-- **Puntajes:** cada hackeo exitoso suma **1 punto** tanto a la ronda como al total del jugador. El panel `/admin` presenta el ranking de **mayor a menor por puntos totales**, incluyendo cuentas desconectadas, y muestra estado y puntos de la ronda. Se actualiza en vivo.
-- **Persistencia:** los totales se guardan automáticamente en `data/scores.json`, incluso si reinicias Node.js. Puedes cambiar la ubicación con la variable `SCORES_FILE`. Haz copias de seguridad de ese archivo.
+- **Rondas:** duran **15 minutos** desde que el administrador las inicia, con un reloj global compartido por todos. Al empezar otra ronda se detienen los ataques, se eliminan las reglas, se reinician los puntos **de ronda** y se asignan nuevas IP. Los puntos totales no se reinician. Un cooldown por hackeo todavía activo sigue vigente al cambiar de ronda.
+- **Puntajes:** cada hackeo exitoso suma **1 punto** tanto a la ronda como al total del jugador. El panel `/admin` presenta el ranking histórico de **mayor a menor por puntos totales**, incluyendo cuentas desconectadas, y muestra estado y puntos de la ronda. Al finalizar una ronda también muestra los resultados de todos los participantes ordenados por puntos obtenidos durante esa ronda y resalta al ganador. Se actualiza en vivo.
+- **Persistencia:** los totales se guardan automáticamente en `data/scores.json`, incluso si reinicias Node.js. Puedes cambiar la ubicación con la variable `SCORES_FILE`. Haz copias de seguridad de ese archivo. **Importante:** el estado de la ronda y la tabla final de esa sesión se mantienen en memoria: reiniciar el servidor devuelve el juego al lobby y borra la tabla de resultados de la ronda terminada, sin borrar los puntos totales.
 - **Cooldown de detener ataque:** se mantiene la pausa anterior de **5 segundos** después de detener manualmente un ataque.
 
 ## Identidad y seguridad

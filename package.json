@@ -1,6 +1,6 @@
 {
   "name": "firewall-hack-game",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Juego educativo de ciberseguridad",
   "main": "server.js",
   "scripts": {

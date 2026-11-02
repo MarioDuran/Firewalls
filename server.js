@@ -14,7 +14,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = 'Admin2026'; // Contraseña fija solicitada para el panel de administración.
 const SCORES_FILE = process.env.SCORES_FILE || path.join(__dirname, 'data', 'scores.json');
-const ROUND_MS = 10 * 60 * 1000;
+const ROUND_MS = 15 * 60 * 1000;
 const REVIVE_MS = 60 * 1000;
 const STOP_ATTACK_MS = 5 * 1000;
 const ATTACK_TICK_MS = 1000;
@@ -26,9 +26,13 @@ app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'ad
 // Un perfil es distinto de un jugador conectado a través de Socket.IO.
 const profiles = new Map();
 const players = new Map();
+// Las rondas no arrancan por sí solas: únicamente el administrador las inicia.
 let roundNumber = 1;
-let roundStartedAt = Date.now();
-let roundEndsAt = roundStartedAt + ROUND_MS;
+let roundStatus = 'waiting'; // waiting | running | finished
+let roundStartedAt = null;
+let roundEndsAt = null;
+let lastRoundResults = null;
+let roundParticipants = new Set();
 
 function loadProfiles() {
   if (!fs.existsSync(SCORES_FILE)) return;
@@ -98,7 +102,21 @@ function publicPlayers() {
 }
 
 function roundState() {
-  return { number: roundNumber, startedAt: roundStartedAt, endsAt: roundEndsAt, serverNow: Date.now() };
+  return { number: roundNumber, status: roundStatus, startedAt: roundStartedAt,
+    endsAt: roundEndsAt, durationMs: ROUND_MS, serverNow: Date.now() };
+}
+
+function isRoundActive() {
+  return roundStatus === 'running' && Date.now() < roundEndsAt;
+}
+
+function getRoundRanking() {
+  return [...roundParticipants].map(token => {
+    const p = profiles.get(token);
+    if (!p) return null;
+    return { username: p.username, roundHacks: p.roundHacks, totalHacks: p.totalHacks };
+  }).filter(Boolean).sort((a, b) =>
+    b.roundHacks - a.roundHacks || b.totalHacks - a.totalHacks || a.username.localeCompare(b.username, 'es'));
 }
 
 function adminState() {
@@ -113,7 +131,7 @@ function adminState() {
     };
   });
   ranking.sort((a, b) => b.totalHacks - a.totalHacks || b.roundHacks - a.roundHacks || a.username.localeCompare(b.username, 'es'));
-  return { ranking, onlineCount: players.size, round: roundState() };
+  return { ranking, onlineCount: players.size, round: roundState(), results: lastRoundResults };
 }
 
 function broadcastPlayers() {
@@ -143,9 +161,15 @@ function gameOver(victim) {
 }
 
 function startNewRound() {
-  roundNumber += 1;
+  // La llamada sólo se realiza desde el manejador autorizado del administrador.
+  if (roundStatus === 'running') return false;
+  if (roundStatus === 'finished') roundNumber += 1;
+  roundStatus = 'running';
   roundStartedAt = Date.now();
   roundEndsAt = roundStartedAt + ROUND_MS;
+  lastRoundResults = null;
+  roundParticipants = new Set([...players.values()].map(p => p.profile.token));
+
   for (const profile of profiles.values()) profile.roundHacks = 0;
   for (const player of players.values()) {
     stopAttack(player);
@@ -153,27 +177,40 @@ function startNewRound() {
     player.firewall = [];
     player.attackCooldownUntil = 0;
     player.ip = generateIP();
-    // El final de ronda no permite saltarse el minuto de penalización.
+    // El comienzo de otra ronda no permite eludir el cooldown tras un hackeo.
     player.status = player.reviveAt > Date.now() ? 'hacked' : 'active';
     if (player.status === 'active') {
       player.reviveAt = 0;
       player.profile.reviveAt = 0;
-      io.to(player.id).emit('game_resumed');
-    } else {
-      io.to(player.id).emit('game_over', { reviveAt: player.reviveAt });
     }
     io.to(player.id).emit('init_state', playerState(player));
-    io.to(player.id).emit('log', `[RONDA] Inicio de ronda ${roundNumber}. Reglas y puntos de ronda reiniciados.`);
+    if (player.status === 'hacked') io.to(player.id).emit('game_over', { reviveAt: player.reviveAt });
+    io.to(player.id).emit('log', `[RONDA] Comenzó la ronda ${roundNumber}.`);
   }
   saveProfiles();
   io.emit('round_state', roundState());
+  io.emit('round_started', { number: roundNumber });
   broadcastPlayers();
+  return true;
 }
 
-// Una ronda es compartida por TODOS, no diez minutos por navegador.
-setInterval(() => {
-  if (Date.now() >= roundEndsAt) startNewRound();
-}, 250);
+function finishRound() {
+  if (roundStatus !== 'running' || Date.now() < roundEndsAt) return false;
+  roundStatus = 'finished';
+  for (const player of players.values()) stopAttack(player);
+  const ranking = getRoundRanking();
+  const topScore = ranking.length ? ranking[0].roundHacks : 0;
+  const winners = topScore > 0 ? ranking.filter(p => p.roundHacks === topScore).map(p => p.username) : [];
+  lastRoundResults = { number: roundNumber, finishedAt: Date.now(), ranking, winners, topScore };
+  io.emit('round_state', roundState());
+  io.emit('round_finished', { number: roundNumber });
+  io.emit('log', `[RONDA] Terminó la ronda ${roundNumber}. Esperando al administrador.`);
+  broadcastPlayers();
+  return true;
+}
+
+// Sólo concluye la ronda; nunca inicia automáticamente la siguiente.
+setInterval(() => { if (roundStatus === 'running') finishRound(); }, 250);
 
 function isValidRule(rule) {
   return rule && typeof rule === 'object' &&
@@ -215,6 +252,14 @@ io.on('connection', socket => {
     socket.join('admins');
     socket.emit('admin_authenticated');
     socket.emit('admin_state', adminState());
+  });
+
+  socket.on('admin_start_round', () => {
+    if (!socket.rooms.has('admins')) {
+      socket.emit('admin_error', 'No tienes autorización para iniciar la ronda.');
+      return;
+    }
+    if (!startNewRound()) socket.emit('admin_error', 'Ya hay una ronda en curso.');
   });
 
   socket.on('join_game', payload => {
@@ -259,6 +304,7 @@ io.on('connection', socket => {
     if (player.status === 'active') profile.reviveAt = 0;
     profile.socketId = socket.id;
     players.set(socket.id, player);
+    if (roundStatus !== 'finished') roundParticipants.add(profile.token);
     socket.emit('init_state', playerState(player));
     socket.emit('round_state', roundState());
     if (player.status === 'hacked') socket.emit('game_over', { reviveAt: player.reviveAt });
@@ -267,7 +313,7 @@ io.on('connection', socket => {
 
   socket.on('restart_game', () => {
     const player = players.get(socket.id);
-    if (!player || player.status !== 'hacked') return;
+    if (!player || player.status !== 'hacked' || !isRoundActive()) return;
     if (Date.now() < player.reviveAt) {
       socket.emit('game_over', { reviveAt: player.reviveAt });
       return;
@@ -287,7 +333,7 @@ io.on('connection', socket => {
 
   socket.on('update_firewall', rule => {
     const player = players.get(socket.id);
-    if (!player || player.status !== 'active') return;
+    if (!player || player.status !== 'active' || !isRoundActive()) return;
     if (!isValidRule(rule)) {
       socket.emit('log', '[ERR] Regla inválida: verifica IP, protocolo y puerto (1-65535).');
       return;
@@ -306,7 +352,7 @@ io.on('connection', socket => {
 
   socket.on('start_attack', params => {
     const attacker = players.get(socket.id);
-    if (!attacker || attacker.status !== 'active') return;
+    if (!attacker || attacker.status !== 'active' || !isRoundActive()) return;
     const victim = players.get(params?.targetId);
     const targetPort = String(params?.targetPort);
     const targetProto = params?.targetProto;
@@ -328,7 +374,7 @@ io.on('connection', socket => {
 
     attacker.attackInterval = setInterval(() => {
       // Si el atacante fue hackeado, NO puede seguir atacando ni sumar puntos.
-      if (attacker.status !== 'active' || victim.status !== 'active' ||
+      if (!isRoundActive() || attacker.status !== 'active' || victim.status !== 'active' ||
           players.get(socket.id) !== attacker || players.get(victim.id) !== victim) {
         stopAttack(attacker);
         return;
@@ -362,7 +408,7 @@ io.on('connection', socket => {
 
   socket.on('stop_attack', () => {
     const player = players.get(socket.id);
-    if (!player || player.status !== 'active') return;
+    if (!player || player.status !== 'active' || !isRoundActive()) return;
     if (stopAttack(player)) {
       player.attackCooldownUntil = Date.now() + STOP_ATTACK_MS;
       socket.emit('log', '[SYS] Ataque detenido. Espera 5 segundos para atacar otra vez.');
@@ -382,6 +428,6 @@ io.on('connection', socket => {
 
 // Exportar el servidor permite pruebas automatizadas sin alterar el juego.
 if (require.main === module) {
-  server.listen(PORT, () => console.log(`Firewalls en http://localhost:${PORT} (rondas de 10 minutos)`));
+  server.listen(PORT, () => console.log(`Firewalls en http://localhost:${PORT} (rondas de 15 minutos iniciadas por administrador)`));
 }
-module.exports = { app, server, io, profiles, players, startNewRound, adminState };
+module.exports = { app, server, io, profiles, players, startNewRound, finishRound, adminState, roundState };
