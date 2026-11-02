@@ -1,124 +1,134 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <title>NETSEC WARGAMES v3</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8">
+  <title>NETSEC WARGAMES | Firewalls</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    :root { --bg: #050505; --panel: rgba(10, 20, 10, 0.95); --glow: #00ff7f; --danger: #ff3333; --muted: #446644; }
-    * { box-sizing: border-box; }
-    html,body { height: 100%; margin: 0; background: var(--bg); font-family: "Courier New", monospace; color: var(--glow); overflow: hidden; }
-    
-    /* Layout */
-    .app { display: flex; height: 100%; width: 100%; }
-    .sidebar { width: 300px; border-right: 1px solid #004400; padding: 20px; display: flex; flex-direction: column; background: rgba(0,20,0,0.3); }
-    .main { flex: 1; display: flex; flex-direction: column; padding: 20px; position: relative; height: 100%; }
-    .top-bar { height: 40px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--muted); padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
-    .game-content { display: flex; flex: 1; gap: 20px; overflow: hidden; }
-    .log-column { flex: 2; display: flex; flex-direction: column; height: 100%; }
-    .rules-column { flex: 1; display: flex; flex-direction: column; height: 100%; }
-
-    /* UI Components */
-    h1, h2, h3 { margin: 0 0 10px 0; font-weight: normal; letter-spacing: 1px; text-transform: uppercase; font-size: 16px; flex-shrink: 0;}
-    .panel { border: 1px solid var(--muted); background: var(--panel); padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-    
-    input, select { background: #001100; border: 1px solid var(--muted); color: var(--glow); padding: 5px; font-family: inherit; width: 100%; margin-bottom: 5px; }
-    
-    /* REMOVER FLECHAS/SPINNERS DE INPUTS */
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; }
-
-    button { background: var(--muted); color: #000; border: none; padding: 8px; cursor: pointer; font-weight: bold; font-family: inherit; width: 100%; transition: 0.2s; }
-    button:hover { background: var(--glow); }
-    button:disabled { background: #333; color: #666; cursor: not-allowed; }
-    button.danger { background: #500; color: #fff; }
-
-    /* Logs */
-    .console-log { flex: 1; background: #000; border: 1px solid var(--muted); padding: 10px; overflow-y: auto; font-size: 13px; white-space: pre-wrap; opacity: 0.9; display: flex; flex-direction: column; }
-    .console-content { margin-top: auto; }
-    .log-entry { margin-bottom: 3px; border-bottom: 1px solid #111; padding-bottom: 2px;}
-    .log-fw { color: #ffff00; font-weight: bold; }
-    .log-atk { color: #00ffff; }
-    .log-err { color: var(--danger); }
-    
-    .player-item { padding: 8px; border-bottom: 1px solid #112211; cursor: pointer; }
-    .player-item:hover { background: #002200; }
-    .player-item.hacked { color: var(--danger); text-decoration: line-through; pointer-events: none; }
-    
-    #login-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); z-index: 100; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-    #game-over-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(50,0,0,0.95); z-index: 200; display: none; align-items: center; justify-content: center; flex-direction: column; color: var(--danger); }
+    :root { --bg:#050805; --panel:#0a170e; --glow:#00ff7f; --danger:#ff5454; --muted:#416344; }
+    * { box-sizing:border-box; }
+    html,body { min-height:100%; margin:0; background:var(--bg); font-family:"Courier New",monospace; color:var(--glow); }
+    .app { display:flex; height:100dvh; width:100%; }
+    .sidebar { width:300px; min-width:260px; border-right:1px solid #004400; padding:20px; display:flex; flex-direction:column; background:#061208; }
+    .main { flex:1; min-width:0; display:flex; flex-direction:column; padding:20px; }
+    .top-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--muted); padding-bottom:12px; margin-bottom:12px; flex-shrink:0; font-size:13px; }
+    .game-content { display:flex; flex:1; gap:20px; min-height:0; }
+    .log-column { flex:2; display:flex; flex-direction:column; min-width:0; min-height:0; }
+    .rules-column { flex:1; display:flex; flex-direction:column; min-width:250px; min-height:0; }
+    h1,h2,h3 { margin:0 0 10px; font-weight:normal; letter-spacing:1px; text-transform:uppercase; font-size:16px; }
+    .panel { border:1px solid var(--muted); background:var(--panel); padding:15px; margin-bottom:16px; border-radius:4px; }
+    label { font-size:11px; }
+    input,select { background:#001100; border:1px solid var(--muted); color:var(--glow); padding:7px; font:inherit; width:100%; margin-bottom:6px; min-width:0; }
+    input::-webkit-outer-spin-button,input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    input[type=number] { -moz-appearance:textfield; }
+    button { background:var(--muted); color:#000; border:0; padding:10px; cursor:pointer; font-weight:bold; font-family:inherit; width:100%; transition:background .2s; }
+    button:hover { background:var(--glow); }
+    button:disabled { background:#333; color:#888; cursor:not-allowed; }
+    button.danger { background:#650b0b; color:#fff; }
+    button.danger:hover { background:#900; }
+    .console-log { flex:1; min-height:0; background:#000; border:1px solid var(--muted); padding:10px; overflow-y:auto; font-size:12px; white-space:pre-wrap; display:flex; flex-direction:column; }
+    .console-content { margin-top:auto; }
+    .log-entry { margin-bottom:4px; border-bottom:1px solid #111; padding-bottom:3px; word-break:break-word; }
+    .log-fw { color:#ffff77; font-weight:bold; }
+    .log-atk { color:#00ffff; }
+    .log-err { color:var(--danger); }
+    .player-item { padding:10px 8px; border-bottom:1px solid #112211; cursor:pointer; font-size:12px; overflow-wrap:anywhere; }
+    .player-item:hover { background:#002200; }
+    .player-item.hacked { color:var(--danger); text-decoration:line-through; pointer-events:none; }
+    .rule-list { font-size:12px; color:#c6d9c9; overflow-y:auto; flex:1; min-height:50px; max-height:40vh; margin:6px 0 14px; overflow-wrap:anywhere; }
+    .rule { border-bottom:1px solid #19321d; padding:6px 0; }
+    .rule-deny { color:#ffb4a3; }
+    #login-screen,#game-over-screen { position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:20px; }
+    #login-screen { background:var(--bg); }
+    #game-over-screen { background:rgba(28,0,0,.97); z-index:200; display:none; text-align:center; color:var(--danger); }
+    #game-over-screen h1 { font-size:clamp(32px,8vw,64px); }
+    #game-over-screen p { max-width:520px; }
+    #restart-btn { max-width:320px; margin:18px auto; }
+    .muted { color:#a0b09f; }
+    .stat { color:#fff; font-weight:bold; }
+    .time { font-size:1.2em; }
+    .link { color:#93c8ff; font-size:12px; }
+    @media(max-width:850px) {
+      .app { height:auto; min-height:100dvh; flex-direction:column; }
+      .sidebar { width:100%; border-right:0; border-bottom:1px solid #004400; padding:15px; }
+      #player-list { max-height:200px; min-height:80px; }
+      .main { padding:15px; min-height:650px; }
+      .game-content { flex-direction:column; }
+      .log-column { min-height:250px; }
+      .rules-column { min-width:0; }
+      .rule-list { max-height:220px; }
+    }
   </style>
 </head>
 <body>
-
   <div id="login-screen">
-    <div class="panel" style="width: 300px;">
+    <div class="panel" style="width:min(340px,100%)">
       <h1 style="text-align:center">NETSEC LOGIN</h1>
-      <input id="login-user" placeholder="Usuario" maxlength="10">
-      <input id="login-pass" type="number" placeholder="Password (0-99)" min="0" max="99">
-      <button onclick="joinGame()">CONECTAR</button>
+      <form id="login-form">
+        <input id="login-user" placeholder="Usuario" maxlength="15" required autocomplete="nickname">
+        <input id="login-pass" type="number" placeholder="Password (0-99)" min="0" max="99" required>
+        <button type="submit">CONECTAR</button>
+      </form>
+      <p id="login-error" style="color:var(--danger);font-size:12px" role="alert"></p>
+      <a class="link" href="/admin">Acceso de administrador</a>
     </div>
   </div>
 
   <div id="game-over-screen">
-    <h1 style="font-size: 60px;">ELIMINADO</h1>
-    <p>Has sido hackeado. Fin del juego.</p>
+    <h1>ELIMINADO</h1>
+    <p>Tu equipo fue hackeado. Se han detenido todos tus ataques.</p>
+    <p>Podrás volver a jugar en <strong id="revive-timer">01:00</strong></p>
+    <button id="restart-btn" onclick="restartGame()" disabled>ESPERA EL COOLDOWN</button>
+    <p class="muted">Tu puntuación acumulada se conserva.</p>
   </div>
 
   <div class="app">
     <div class="sidebar">
       <h3>Scanner de Red</h3>
-      <div id="player-list" style="overflow-y: auto; flex: 1; border: 1px solid #222; margin-bottom: 20px;"></div>
-      
-      <div class="panel" style="flex-shrink: 0;">
+      <div id="player-list" style="overflow-y:auto;flex:1;border:1px solid #222;margin-bottom:18px;min-height:70px"></div>
+      <div class="panel" style="flex-shrink:0">
         <h3>Attack Tool</h3>
-        <label style="font-size: 10px;">Target IP:</label>
-        <input id="atk-ip" readonly placeholder="Selecciona una IP..." style="opacity: 0.5">
+        <label for="atk-ip">Target IP:</label>
+        <input id="atk-ip" readonly placeholder="Selecciona una IP..." style="opacity:.65">
         <input id="atk-id" type="hidden">
-        
-        <div style="display:flex; gap: 5px;">
-          <select id="atk-proto" style="width: 40%"><option value="TCP">TCP</option><option value="UDP">UDP</option></select>
-          <select id="atk-port" style="width: 60%">
-            <option value="22">22 (SSH)</option>
-            <option value="80">80 (HTTP)</option>
-            <option value="443">443 (HTTPS)</option>
-            <option value="21">21 (SFTP)</option>
+        <div style="display:flex;gap:5px">
+          <select id="atk-proto" aria-label="Protocolo de ataque" style="width:40%"><option value="TCP">TCP</option><option value="UDP">UDP</option></select>
+          <select id="atk-port" aria-label="Puerto de ataque" style="width:60%">
+            <option value="22">22 (SSH)</option><option value="80">80 (HTTP)</option>
+            <option value="443">443 (HTTPS)</option><option value="21">21 (SFTP)</option>
           </select>
         </div>
-        
         <button id="btn-attack" class="danger" onclick="toggleAttack()">INICIAR ATAQUE</button>
-        <div id="cooldown-msg" style="color: yellow; font-size: 10px; text-align: center; margin-top: 5px; display: none;">COOLDOWN ACTIVO...</div>
+        <div id="cooldown-msg" style="color:#ffff77;font-size:11px;text-align:center;margin-top:7px;display:none">COOLDOWN ACTIVO...</div>
       </div>
+      <a class="link" href="/admin">Panel de administrador</a>
     </div>
 
     <div class="main">
       <div class="top-bar">
         <div>USR: <strong id="my-user">...</strong> | IP: <strong id="my-ip">...</strong> | PASS: <strong id="my-pass">...</strong></div>
-        <div>HACKS: <strong id="my-hacks" style="color: #fff; font-size: 1.2em">0</strong></div>
+        <div>RONDA <span class="stat" id="round-number">1</span> | <span class="time stat" id="round-timer">10:00</span></div>
+        <div>HACKS RONDA: <strong class="stat" id="my-hacks">0</strong> | TOTAL: <strong class="stat" id="my-total">0</strong></div>
       </div>
-
       <div class="game-content">
         <div class="log-column">
           <h3>SISTEMA IDS / LOGS</h3>
-          <div id="console" class="console-log">
-             <div class="console-content" id="console-inner"></div>
-          </div>
+          <div id="console" class="console-log"><div class="console-content" id="console-inner"></div></div>
         </div>
-        
         <div class="rules-column">
-          <h3>Firewall (Max 3)</h3>
-          <div class="panel">
-            <div id="rules-list" style="font-size: 12px; margin-bottom: 15px; color: #aaa; min-height: 50px;">Sin reglas activas.</div>
-            <div style="border-top: 1px solid #333; padding-top: 10px;">
+          <h3>Firewall (sin límite de reglas)</h3>
+          <div class="panel" style="display:flex;flex-direction:column;min-height:0;flex:1">
+            <div style="font-size:11px">REGLAS ACTIVAS: <strong id="rule-count">0</strong></div>
+            <div id="rules-list" class="rule-list">Sin reglas activas.</div>
+            <div style="border-top:1px solid #333;padding-top:10px;flex-shrink:0">
               <select id="fw-action"><option value="deny">DENY (Denegar)</option><option value="allow">ALLOW (Permitir)</option></select>
-              <div style="display:flex; gap:5px;">
-                <input id="fw-src" placeholder="IP Origen (Ej: 10.12.0.5)">
-                <select id="fw-proto"><option value="TCP">TCP</option><option value="UDP">UDP</option></select>
+              <div style="display:flex;gap:5px">
+                <input id="fw-src" placeholder="IP origen (Ej: 10.12.0.5)" aria-label="IP de origen">
+                <select id="fw-proto" style="max-width:90px" aria-label="Protocolo de regla"><option value="TCP">TCP</option><option value="UDP">UDP</option></select>
               </div>
-              <input id="fw-port" type="text" placeholder="Puerto (Ej. 22)">
-              <button onclick="addRule()">AGREGAR REGLA</button>
+              <input id="fw-port" type="text" inputmode="numeric" placeholder="Puerto (Ej: 22)">
+              <button id="add-rule-btn" onclick="addRule()">AGREGAR REGLA</button>
             </div>
           </div>
         </div>
@@ -128,166 +138,183 @@
 
   <script>
     const socket = io();
+    const $ = id => document.getElementById(id);
     let myId = null;
+    let myStatus = 'active';
     let isAttacking = false;
-    let inCooldown = false;
+    let attackCooldownUntil = 0;
+    let reviveAt = 0;
+    let roundEndsAt = 0;
+    let clockOffset = 0;
+    let joinedBefore = false;
+    let currentRound = null;
+    let joinCredentials = null;
 
-    // --- LOGIN ---
-    function joinGame() {
-      const user = document.getElementById('login-user').value;
-      const pass = document.getElementById('login-pass').value;
-      if(!user || !pass) return alert("Completa los campos");
-      if(pass < 0 || pass > 99) return alert("Password debe ser 0-99");
-      
-      socket.emit('join_game', { username: user, password: pass });
-      document.getElementById('login-screen').style.display = 'none';
+    function serverNow() { return Date.now() + clockOffset; }
+    function remaining(ms) {
+      const total = Math.max(0, Math.ceil(ms / 1000));
+      return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
     }
+    function setAttacking(value) { isAttacking = value; renderControls(); }
+    function renderControls() {
+      const blocked = myStatus === 'hacked';
+      const cooling = attackCooldownUntil > serverNow();
+      $('btn-attack').disabled = blocked || (cooling && !isAttacking) || !myId;
+      $('btn-attack').classList.toggle('danger', !isAttacking);
+      $('btn-attack').textContent = blocked ? 'EQUIPO ELIMINADO' : isAttacking ? 'DETENER ATAQUE' : cooling ? `Cooldown (${remaining(attackCooldownUntil - serverNow())})` : 'INICIAR ATAQUE';
+      $('cooldown-msg').style.display = cooling && !blocked ? 'block' : 'none';
+      $('add-rule-btn').disabled = blocked || !myId;
+      $('game-over-screen').style.display = blocked ? 'flex' : 'none';
+      const waiting = reviveAt > serverNow();
+      $('revive-timer').textContent = waiting ? remaining(reviveAt - serverNow()) : '00:00';
+      $('restart-btn').disabled = waiting;
+      $('restart-btn').textContent = waiting ? 'ESPERA EL COOLDOWN' : 'VOLVER A JUGAR';
+    }
+    function tick() {
+      if (roundEndsAt) $('round-timer').textContent = remaining(roundEndsAt - serverNow());
+      renderControls();
+    }
+    setInterval(tick, 250);
 
-    socket.on('init_state', (player) => {
+    $('login-form').addEventListener('submit', event => { event.preventDefault(); joinGame(); });
+    function joinGame() {
+      const username = $('login-user').value.trim();
+      const password = $('login-pass').value;
+      if (!username || !/^\d{1,2}$/.test(password)) {
+        $('login-error').textContent = 'Completa el usuario y una contraseña válida (0-99).';
+        return;
+      }
+      joinCredentials = { username, password };
+      sendJoin();
+    }
+    function sendJoin() {
+      if (!joinCredentials) return;
+      socket.emit('join_game', { ...joinCredentials, profileToken: localStorage.getItem('firewalls-profile-token') });
+    }
+    socket.on('connect', () => {
+      // Socket.IO usa un ID nuevo tras reconectar; la identidad se conserva mediante token.
+      if (joinedBefore && joinCredentials) sendJoin();
+    });
+    socket.on('join_error', error => { $('login-error').textContent = error; });
+    socket.on('round_state', data => {
+      if (currentRound !== null && data.number !== currentRound) {
+        $('atk-id').value = '';
+        $('atk-ip').value = '';
+        setAttacking(false);
+      }
+      currentRound = data.number;
+      roundEndsAt = data.endsAt;
+      clockOffset = data.serverNow - Date.now();
+      $('round-number').textContent = data.number;
+      tick();
+    });
+    socket.on('init_state', player => {
+      joinedBefore = true;
       myId = player.id;
-      document.getElementById('my-user').innerText = player.username;
-      document.getElementById('my-ip').innerText = player.ip;
-      document.getElementById('my-pass').innerText = player.password;
-      document.getElementById('my-hacks').innerText = player.hacks;
+      myStatus = player.status;
+      reviveAt = player.reviveAt || 0;
+      attackCooldownUntil = player.attackCooldownUntil || 0;
+      if (player.profileToken) localStorage.setItem('firewalls-profile-token', player.profileToken);
+      $('login-screen').style.display = 'none';
+      $('login-user').value = player.username;
+      $('my-user').textContent = player.username;
+      $('my-ip').textContent = player.ip;
+      $('my-pass').textContent = player.password;
+      $('my-hacks').textContent = player.hacks;
+      $('my-total').textContent = player.totalHacks;
       renderRules(player.firewall);
+      if (player.status === 'hacked') setAttacking(false);
+      else renderControls();
       addLog(`[SYS] Sistema online. IP: ${player.ip}`);
     });
-
-    socket.on('update_player_list', (list) => {
-      const container = document.getElementById('player-list');
-      container.innerHTML = '';
+    socket.on('update_player_list', list => {
+      const container = $('player-list');
+      container.replaceChildren();
       list.forEach(p => {
         if (p.id === myId) return;
-        const div = document.createElement('div');
-        div.className = `player-item ${p.status === 'hacked' ? 'hacked' : ''}`;
-        div.innerHTML = `<div><strong>${p.ip}</strong> (${p.username})</div>`;
-        div.onclick = () => selectTarget(p);
-        container.appendChild(div);
+        const item = document.createElement('div');
+        item.className = `player-item ${p.status === 'hacked' ? 'hacked' : ''}`;
+        // textContent impide inyectar HTML a través de nombres de usuario.
+        item.textContent = `${p.ip} (${p.username})`;
+        item.onclick = () => selectTarget(p);
+        container.appendChild(item);
       });
     });
 
-    // --- FIREWALL ---
     function addRule() {
-      const action = document.getElementById('fw-action').value;
-      const src = document.getElementById('fw-src').value;
-      const proto = document.getElementById('fw-proto').value;
-      const portInput = document.getElementById('fw-port').value;
-
-      // 1. Validar Puerto (Solo números)
-      if (!/^\d+$/.test(portInput)) {
-        alert("Error: El puerto debe contener solo números.");
-        return;
+      if (myStatus !== 'active') return;
+      const action = $('fw-action').value;
+      const src = $('fw-src').value.trim();
+      const proto = $('fw-proto').value;
+      const port = $('fw-port').value.trim();
+      if (!/^[1-9]\d{0,4}$/.test(port) || Number(port) > 65535) return alert('El puerto debe ser un número de 1 a 65535.');
+      const octets = src.split('.');
+      if (octets.length !== 4 || octets.some(x => !/^\d{1,3}$/.test(x) || Number(x) > 255)) {
+        return alert('Especifica una dirección IPv4 válida, sin comodines (*).');
       }
-
-      // 2. Validar IP (No permitir *)
-      if (!src || src.includes('*')) {
-        alert("Error: Debes especificar una IP directa (No se permite *).");
-        return;
-      }
-
-      socket.emit('update_firewall', { action, src, proto, port: portInput });
-      
-      // Limpiar campos
-      document.getElementById('fw-src').value = '';
-      document.getElementById('fw-port').value = '';
+      socket.emit('update_firewall', { action, src, proto, port });
+      $('fw-src').value = '';
+      $('fw-port').value = '';
     }
-
-    socket.on('firewall_updated', (rules) => renderRules(rules));
-
     function renderRules(rules) {
-      const list = document.getElementById('rules-list');
-      if (rules.length === 0) { list.innerHTML = "Sin reglas activas."; return; }
-      list.innerHTML = rules.map((r, i) => 
-        `<div>${i+1}. <strong>${r.action.toUpperCase()}</strong> ${r.proto}/${r.port} DESDE ${r.src}</div>`
-      ).join('');
+      $('rule-count').textContent = rules.length;
+      const list = $('rules-list');
+      list.replaceChildren();
+      if (!rules.length) { list.textContent = 'Sin reglas activas.'; return; }
+      rules.forEach((rule, i) => {
+        const el = document.createElement('div');
+        el.className = `rule ${rule.action === 'deny' ? 'rule-deny' : ''}`;
+        el.textContent = `${i + 1}. ${rule.action.toUpperCase()} ${rule.proto}/${rule.port} DESDE ${rule.src}`;
+        list.appendChild(el);
+      });
     }
+    socket.on('firewall_updated', renderRules);
 
-    // --- ATAQUE & COOLDOWN ---
     function selectTarget(player) {
-      if(player.status === 'hacked') return;
-      if(isAttacking) return alert("Stop Attack primero.");
-      
-      document.getElementById('atk-ip').value = player.ip;
-      document.getElementById('atk-id').value = player.id;
+      if (myStatus !== 'active' || player.status === 'hacked') return;
+      if (isAttacking) return alert('Detén el ataque antes de seleccionar otro objetivo.');
+      $('atk-ip').value = player.ip;
+      $('atk-id').value = player.id;
     }
-
     function toggleAttack() {
-      const btn = document.getElementById('btn-attack');
-      
-      if (isAttacking) {
-        // DETENER
-        socket.emit('stop_attack');
-        isAttacking = false;
-        btn.innerText = "INICIAR ATAQUE";
-        btn.classList.add('danger');
-      } else {
-        // INICIAR
-        if(inCooldown) return;
-        
-        const targetId = document.getElementById('atk-id').value;
-        const port = document.getElementById('atk-port').value;
-        const proto = document.getElementById('atk-proto').value;
-        
-        if (!targetId) return alert("Selecciona un objetivo.");
-        
-        socket.emit('start_attack', { targetId, targetPort: port, targetProto: proto });
-        isAttacking = true;
-        btn.innerText = "Stop Attack";
-        btn.classList.remove('danger');
-      }
+      if (myStatus !== 'active') return;
+      if (isAttacking) { socket.emit('stop_attack'); return; }
+      if (attackCooldownUntil > serverNow()) return;
+      if (!$('atk-id').value) return alert('Selecciona un objetivo.');
+      socket.emit('start_attack', { targetId: $('atk-id').value, targetPort: $('atk-port').value, targetProto: $('atk-proto').value });
     }
-
-    socket.on('cooldown_start', (seconds) => {
-      inCooldown = true;
-      const btn = document.getElementById('btn-attack');
-      const msg = document.getElementById('cooldown-msg');
-      
-      btn.disabled = true;
-      msg.style.display = 'block';
-      let left = seconds;
-      
-      btn.innerText = `Cooldown (${left})...`;
-      
-      const interval = setInterval(() => {
-        left--;
-        btn.innerText = `Cooldown (${left})...`;
-        if (left <= 0) {
-          clearInterval(interval);
-          inCooldown = false;
-          btn.disabled = false;
-          btn.innerText = "INICIAR ATAQUE";
-          btn.classList.add('danger');
-          msg.style.display = 'none';
-        }
-      }, 1000);
+    socket.on('attack_started', () => setAttacking(true));
+    socket.on('attack_stopped', () => setAttacking(false));
+    socket.on('cooldown_start', data => { attackCooldownUntil = data.until; renderControls(); });
+    socket.on('hack_result', data => {
+      setAttacking(false);
+      if (data.success) addLog(`[OK] ${data.msg}`);
     });
-
-    socket.on('hack_result', (data) => {
-      if (isAttacking) toggleAttack(); 
-      alert(data.msg);
+    socket.on('game_over', data => {
+      myStatus = 'hacked';
+      reviveAt = data.reviveAt;
+      setAttacking(false);
+      addLog('[ERR] Tu equipo fue hackeado. Todos tus ataques están desactivados.');
     });
-
-    // --- LOGS ---
-    socket.on('log', (msg) => addLog(msg));
-
+    socket.on('game_resumed', () => { myStatus = 'active'; reviveAt = 0; setAttacking(false); });
+    function restartGame() {
+      if (myStatus === 'hacked' && reviveAt <= serverNow()) socket.emit('restart_game');
+    }
+    socket.on('log', addLog);
     function addLog(msg) {
-      const inner = document.getElementById('console-inner');
       const entry = document.createElement('div');
       entry.className = 'log-entry';
       if (msg.includes('BLOQUEADO')) entry.classList.add('log-fw');
       if (msg.includes('[ERR]')) entry.classList.add('log-err');
-      if (msg.includes('Iniciando')) entry.classList.add('log-atk');
-      
-      const time = new Date().toLocaleTimeString();
-      entry.innerText = `[${time}] ${msg}`;
-      
+      if (msg.includes('[ATK]')) entry.classList.add('log-atk');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      const inner = $('console-inner');
       inner.appendChild(entry);
-      document.getElementById('console').scrollTop = document.getElementById('console').scrollHeight;
+      // Evitar crecimiento ilimitado de DOM en sesiones prolongadas.
+      if (inner.childElementCount > 1000) inner.firstElementChild.remove();
+      $('console').scrollTop = $('console').scrollHeight;
     }
-
-    socket.on('game_over', () => {
-      document.getElementById('game-over-screen').style.display = 'flex';
-    });
+    socket.on('disconnect', () => { setAttacking(false); addLog('[SYS] Conexión interrumpida. Intentando reconectar...'); });
   </script>
 </body>
 </html>

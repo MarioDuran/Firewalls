@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firewalls | Administración</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root { color-scheme: dark; font-family: 'Courier New', monospace; background: #050805; color: #20ff83; }
+    * { box-sizing: border-box; }
+    body { max-width: 1100px; margin: 0 auto; padding: 28px 18px; }
+    h1 { font-size: 1.5rem; letter-spacing: 2px; }
+    h2 { font-size: 1.1rem; }
+    .panel { border: 1px solid #356341; background: #09160b; padding: 20px; margin: 18px 0; border-radius: 5px; }
+    input, button { padding: 12px; background: #021108; color: #20ff83; border: 1px solid #386641; font: inherit; }
+    input { max-width: 340px; width: 100%; }
+    button { cursor: pointer; }
+    button:hover { background: #103a23; }
+    .error { color: #ff7373; margin: 12px 0; min-height: 24px; }
+    .stats { display: flex; gap: 14px; flex-wrap: wrap; }
+    .stat { flex: 1; min-width: 180px; background: #041208; border: 1px solid #294b31; padding: 15px; }
+    .stat strong { display: block; font-size: 1.5rem; color: #fff; margin-top: 7px; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 620px; }
+    th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #24442d; }
+    th { color: #b0ccbb; font-size: .82rem; }
+    td.number { color: #fff; font-weight: bold; }
+    .muted { color: #93a99b; }
+    .offline { color: #89938a; }
+    .hacked { color: #ff7373; }
+    a { color: #7ac8ff; }
+  </style>
+</head>
+<body>
+  <header><h1>NETSEC // PANEL DE ADMINISTRACIÓN</h1><p class="muted">Clasificación acumulada de todos los jugadores, incluidos los desconectados.</p></header>
+  <section id="login-panel" class="panel">
+    <h2>Acceso restringido</h2>
+    <form id="admin-form">
+      <input id="admin-password" type="password" autocomplete="current-password" placeholder="Contraseña de administrador" required>
+      <button type="submit">ENTRAR</button>
+    </form>
+    <p id="error" class="error" role="alert"></p>
+  </section>
+  <main id="admin-panel" style="display:none">
+    <div class="stats">
+      <div class="stat">RONDA ACTUAL<strong id="round-number">—</strong></div>
+      <div class="stat">TIEMPO RESTANTE<strong id="round-time">10:00</strong></div>
+      <div class="stat">JUGADORES CONECTADOS<strong id="online-count">0</strong></div>
+      <div class="stat">JUGADORES REGISTRADOS<strong id="total-count">0</strong></div>
+    </div>
+    <section class="panel">
+      <h2>RANKING GENERAL — MAYOR A MENOR</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>POS.</th><th>JUGADOR</th><th>PUNTOS TOTALES</th><th>PUNTOS DE RONDA</th><th>ESTADO</th></tr></thead>
+        <tbody id="ranking-body"></tbody>
+      </table></div>
+    </section>
+  </main>
+  <p><a href="/">Volver al juego</a></p>
+  <script>
+    const socket = io();
+    let authenticated = false;
+    let roundEndsAt = 0;
+    let clockOffset = 0;
+    const $ = id => document.getElementById(id);
+    function formatRemaining(ms) {
+      const secs = Math.max(0, Math.ceil(ms / 1000));
+      return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
+    }
+    $('admin-form').addEventListener('submit', event => {
+      event.preventDefault();
+      $('error').textContent = '';
+      socket.emit('admin_login', { password: $('admin-password').value });
+      $('admin-password').value = '';
+    });
+    socket.on('admin_error', msg => $('error').textContent = msg);
+    socket.on('admin_authenticated', () => {
+      authenticated = true;
+      $('login-panel').style.display = 'none';
+      $('admin-panel').style.display = 'block';
+    });
+    socket.on('admin_state', data => {
+      if (!authenticated) return;
+      $('round-number').textContent = data.round.number;
+      roundEndsAt = data.round.endsAt;
+      clockOffset = data.round.serverNow - Date.now();
+      $('online-count').textContent = data.onlineCount;
+      $('total-count').textContent = data.ranking.length;
+      const tbody = $('ranking-body');
+      tbody.replaceChildren();
+      if (!data.ranking.length) {
+        const row = tbody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 5;
+        cell.textContent = 'Todavía no hay participantes.';
+      }
+      data.ranking.forEach((p, i) => {
+        const row = tbody.insertRow();
+        [i + 1, p.username, p.totalHacks, p.roundHacks, !p.online ? 'Desconectado' : p.status === 'hacked' ? 'Hackeado' : 'Activo'].forEach((value, index) => {
+          const cell = row.insertCell();
+          cell.textContent = value;
+          if (index === 2) cell.className = 'number';
+          if (index === 4) cell.className = !p.online ? 'offline' : p.status === 'hacked' ? 'hacked' : '';
+        });
+      });
+    });
+    socket.on('disconnect', () => {
+      authenticated = false;
+      $('admin-panel').style.display = 'none';
+      $('login-panel').style.display = 'block';
+      $('error').textContent = 'Conexión perdida. Inicia sesión de nuevo.';
+    });
+    setInterval(() => { if (roundEndsAt) $('round-time').textContent = formatRemaining(roundEndsAt - (Date.now() + clockOffset)); }, 250);
+  </script>
+</body>
+</html>
